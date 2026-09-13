@@ -16,7 +16,7 @@ body.compact .brand{gap:14px}
 body.compact .brand-mark{width:74px;height:74px}
 body.compact .brand h1{font-size:50px}
 body.compact .brand h1 span{font-size:24px}
-body.compact .brand p{font-size:13px;letter-spacing:3.4px;line-height:2}
+body.compact .brand p{font-size:22px;letter-spacing:2.4px;line-height:1.8}
 body.compact .session-label{display:none}
 body.compact .header-right{gap:14px}
 body.compact .icon-button,body.compact .guide-button{height:74px;border-radius:9px}
@@ -25,7 +25,7 @@ body.compact .icon-button svg{width:38px;height:38px}
 body.compact .guide-button{padding:0 20px;font-size:24px}
 body.compact .guide-button>span{margin-right:10px}
 body.compact .guide-button kbd{display:none}
-body.compact #stage .session-info{top:auto;bottom:78px;left:0;right:0;text-align:center;font-size:18px;letter-spacing:2px}
+body.compact #stage .session-info{top:auto;bottom:78px;left:0;right:0;text-align:center;font-size:22px;letter-spacing:1.4px}
 body.compact .session-info .dot{margin:0 9px}
 
 body.compact #stage .table-shadow{left:132px;top:364px;width:504px;height:364px}
@@ -82,11 +82,11 @@ body.compact .hole-cards{gap:12px}
 body.compact #stage .hole-cards .card{width:96px;height:133px;border-radius:9px}
 body.compact #stage .hole-cards .card .corner{font-size:30px;top:7px;left:9px}
 body.compact #stage .hole-cards .card .center-suit{font-size:54px}
-body.compact .your-label{font-size:17px;letter-spacing:2.4px;top:-6px}
+body.compact .your-label{font-size:21px;letter-spacing:1.6px;top:-6px}
 body.compact .your-label .dealer-token{left:6px;top:-4px}
 
 body.compact #stage .wallet{left:34px;top:1032px}
-body.compact .wallet .eyebrow,body.compact .eyebrow{font-size:17px;letter-spacing:2.4px}
+body.compact .wallet .eyebrow,body.compact .eyebrow{font-size:21px;letter-spacing:1.6px}
 body.compact #stage .wallet strong{font-size:46px}
 body.compact .wallet small{font-size:22px}
 body.compact .wallet .chip-symbol{font-size:34px}
@@ -106,8 +106,8 @@ body.compact .action-buttons button{flex:1;min-width:0;height:96px;padding:0 10p
 body.compact .action-buttons .primary{box-shadow:0 5px #9f8057}
 body.compact .action-buttons button small{display:none}
 body.compact .action-buttons .primary span{margin-left:12px}
-body.compact #stage footer{left:24px;right:24px;bottom:24px;font-size:20px}
-body.compact footer button{font-size:20px;padding:10px 4px}
+body.compact #stage footer{left:24px;right:24px;bottom:24px;font-size:23px}
+body.compact footer button{font-size:23px;padding:10px 4px}
 
 body.compact .raise-controls{left:0;right:0;width:auto;bottom:128px;padding:24px 22px;border-radius:8px}
 body.compact .raise-controls label{font-size:24px}

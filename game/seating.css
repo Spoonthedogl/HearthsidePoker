@@ -36,7 +36,7 @@
 #stage .wallet strong{font-size:25px}
 #stage .hand-peek,#stage.seated .hand-peek{left:895px;top:784px;max-width:230px;padding:8px 12px}
 #stage .hand-peek strong{font-size:18px}
-#stage .hand-peek #handSource{font-size:10px}
+#stage .hand-peek #handSource{font-size:12px}
 #stage .action-bar{bottom:38px}
 #stage .session-info{top:107px}
 /* Only the results list scrolls; the next-hand action stays beside its heading. */
