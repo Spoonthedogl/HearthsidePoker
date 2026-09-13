@@ -1,6 +1,12 @@
 # Changelog
 
-## Unreleased
+## v1.4.0 — 2026-09-13
+
+Choose how your evening plays, keep a ledger of the club, and two new ways to
+make the table easier to read.
+
+**Save compatibility:** unaffected. An evening saved by v1.3.0 carries on at a
+steady table with standard companions, exactly as it was being played.
 
 ### Added
 
