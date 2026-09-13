@@ -108,3 +108,16 @@ test('the cushion makes the cat livelier, and only once bought', () => {
   state.owned = ['cushion'];
   assert(Club.catLiveliness(state) > 1);
 });
+
+test('the ledger reads the club back without storing anything new', () => {
+  let state = Club.fresh();
+  assert.deepEqual(Club.ledger(state), {evenings: 0, bestNight: 0, comforts: 0, comfortsTotal: Club.catalogue.length});
+  state = Club.endEvening(state, 150);
+  state = Club.endEvening(state, 90);
+  state = Club.buy(state, 'mantel').state;
+  const ledger = Club.ledger(state);
+  assert.equal(ledger.evenings, 2);
+  assert.equal(ledger.bestNight, 150, 'a quieter second night does not lower the best');
+  assert.equal(ledger.comforts, 1);
+  assert.deepEqual(Object.keys(state).sort(), ['bestTakeHome', 'evenings', 'fund', 'owned', 'version'], 'the saved shape is exactly what it was');
+});

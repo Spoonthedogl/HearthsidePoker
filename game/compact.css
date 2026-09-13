@@ -216,3 +216,8 @@ body.compact #recapContent h3{font-size:28px}
 body.compact .log-list{font-size:23px;line-height:1.5}
 body.compact .log-list li{padding:12px 2px}
 body.compact .log-list .log-street{font-size:18px;letter-spacing:2.4px;gap:12px}
+body.compact .club-ledger{gap:12px;margin:8px 0 22px}
+body.compact .club-ledger>div{padding:14px}
+body.compact .club-ledger strong{font-size:32px}
+body.compact .club-ledger .chip-symbol{font-size:26px}
+body.compact #eveningClose .evening-best{font-size:25px}

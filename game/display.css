@@ -78,3 +78,9 @@ select:focus-visible{outline:3px solid #a77534;outline-offset:3px}
 .log-list .log-street{display:flex;align-items:center;gap:9px;font:10px 'Courier New';letter-spacing:2px;color:#8d7656;margin-top:6px}
 .log-list .log-street .row-cards{margin:0}
 .log-list .log-result{font-style:italic;color:#7a5f2c;border-bottom:0}
+/* The club so far, beside the fund. */
+.club-ledger{display:flex;gap:10px;margin:4px 0 14px}
+.club-ledger>div{flex:1;background:#e1d2af;border:1px solid #c5b28c;border-radius:4px;padding:8px 10px}
+.club-ledger strong{display:block;font:18px Georgia;color:#4c4030;margin-top:4px}
+.club-ledger .chip-symbol{font-size:15px}
+#eveningClose .evening-best{font:italic 14px/1.6 Georgia;color:#7a5f2c;margin:4px 0}
