@@ -1,7 +1,7 @@
 /* Private save data stays separate from the visible-card journal and AI inputs. */
 (function(root,factory){var api=factory(typeof module==='object'&&module.exports?require('./poker.js'):root.Poker);if(typeof module==='object'&&module.exports)module.exports=api;else root.HearthSession=api;})(typeof globalThis!=='undefined'?globalThis:this,function(Poker){
  'use strict';
- var fields=['smallBlind','bigBlind','startingStack','injected','players','dealer','actor','street','board','currentBet','minRaise','handNumber','events','eventId','result','gameOver','deck'];
+ var fields=['smallBlind','bigBlind','startingStack','injected','difficulty','players','dealer','actor','street','board','currentBet','minRaise','handNumber','events','eventId','result','gameOver','deck'];
  var copy=x=>JSON.parse(JSON.stringify(x)),integer=(x,min=0,max=100000)=>Number.isInteger(x)&&x>=min&&x<=max;
  function pack(table,ui){var state={};fields.forEach(k=>state[k]=table[k]);state.pending=Array.from(table.pending);return copy({version:2,savedAt:Date.now(),table:state,ui:ui});}
  function unpack(save){
@@ -12,6 +12,8 @@
   // only have been written on an untouched table, so the old totals still hold.
   if(t.startingStack===undefined)t.startingStack=500;
   if(t.injected===undefined)t.injected=0;
+  if(t.difficulty===undefined)t.difficulty='standard';
+  if(!Poker.DIFFICULTIES.includes(t.difficulty))throw Error('Invalid saved difficulty.');
   if(!integer(t.startingStack,1)||!integer(t.injected,0))throw Error('Invalid saved stakes.');
   // Play only moves chips between stacks, so the table total is the seats'
   // buy-ins plus whatever has been bought back in since.
@@ -22,7 +24,7 @@
   var chips=t.players.length*t.startingStack+t.injected;
   if(!integer(u.visiblePot,0,chips)||!['preflop','flop','turn','river','showdown'].includes(u.visibleStreet)||typeof u.revealed!=='boolean'||u.visibleSeats.some(p=>!p||!integer(p.stack,0,chips)||!integer(p.bet,0,chips)||typeof p.folded!=='boolean'||typeof p.allIn!=='boolean'))throw Error('Invalid saved presentation.');
   if(t.actor!==null&&!t.pending.includes(t.actor)||!!t.result!==(t.street==='showdown'))throw Error('Inconsistent saved actor.');
-  var table=new Poker.Table({names:t.players.map(p=>p.name),startingStack:t.startingStack,smallBlind:t.smallBlind,bigBlind:t.bigBlind});fields.forEach(k=>table[k]=t[k]);table.pending=new Set(t.pending);return {table:table,ui:u};
+  var table=new Poker.Table({names:t.players.map(p=>p.name),startingStack:t.startingStack,smallBlind:t.smallBlind,bigBlind:t.bigBlind,difficulty:t.difficulty});fields.forEach(k=>table[k]=t[k]);table.pending=new Set(t.pending);return {table:table,ui:u};
  }
  // A result event is replayed whenever a saved hand is restored, so the
  // running record and the evening's hand count must only move once per hand.

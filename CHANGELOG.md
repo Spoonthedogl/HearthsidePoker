@@ -1,5 +1,34 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- **Choose how good your companions are.** Table setup offers Gentle, Standard
+  or Sharp companions. Gentle ones misjudge their hands and call too often;
+  Sharp ones read the table closely and press when they are ahead. Standard is
+  the table you already know, exactly as it was.
+- **Choose the kind of evening.** A steady table at 5 / 10, rising blinds that
+  climb every four hands to 15 / 30 as the fire burns down, or a high-stakes
+  table at 10 / 20. Swingier tables tend to put more into the club fund.
+- **A ledger for the club.** The club fund shows how many evenings you have
+  played, your best night, and how much of the room you have built, and the
+  evening close-out celebrates your first evening and any new best night.
+- **Four-colour deck**, in Settings: diamonds turn blue and clubs green.
+- **Larger text**, in Settings: the table's small print and every panel's
+  contents get bigger without anything running off the screen.
+
+### Fixed
+
+- On a phone, "Hand details" under your current hand was far too small to read.
+- On a phone with a full table, a companion's nameplate could cover their own
+  cards or a neighbour's, most often while a status like "Big blind 20" wrapped
+  onto a second line, and on smaller tables the top nameplate tucked under the
+  title. Seats now leave room for both, the table message sits just under the
+  board, and the teacup has moved beside your cards.
+
+---
+
 ## v1.3.0 — 2026-09-13
 
 The first release to include the portrait phone layout, and a pass over the

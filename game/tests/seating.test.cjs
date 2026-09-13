@@ -27,13 +27,24 @@ for(let count=2;count<=7;count++){
  });
  test(count+' players: the portrait phone layout also keeps every seat readable',()=>{
   const stage=Seats.STAGE.compact,layout=Seats.layout(count,'compact').slice(1);
-  const board={x:203,y:515,width:362,height:92};
+  // What the portrait table really draws around the seats: the board, the table
+  // message under it, the teacup beside your cards, the header, and your hand.
+  const board={x:203,y:515,width:362,height:92},message={x:249,y:610,width:270,height:96},teacup={x:60,y:896,width:84,height:74};
   for(const seat of layout){
    for(const box of [seat.body,seat.label,seat.cards,seat.chips]){assert(box.x>=0&&box.y>=0&&box.x+box.width<=stage.width&&box.y+box.height<=stage.height,'A seat box leaves the portrait stage');}
    assert(!overlaps(seat.cards,board),'Opponent cards cover the board');
    assert(!overlaps(seat.label,board),'A nameplate covers the board');
+   assert(seat.label.height>=84,'A nameplate needs room for a status that wraps onto a second line');
+   assert(seat.label.y>=116,'A nameplate slides under the title and its tagline');
+   for(const box of [seat.label,seat.cards,seat.chips]){
+    assert(box.y+box.height<=866,'A seat reaches down over your own cards');
+    assert(!overlaps(box,board),'A seat covers the board');
+    assert(!overlaps(box,message),'A seat covers the table message');
+    assert(!overlaps(box,teacup),'A seat covers the teacup');
+   }
    for(const other of layout){
     assert(!overlaps(seat.cards,other.label),'A nameplate covers cards');
+    assert(!overlaps(seat.chips,other.label),'Chips cover a nameplate');
     if(other.id!==seat.id){assert(!overlaps(seat.label,other.label));assert(!overlaps(seat.cards,other.cards));assert(!overlaps(seat.chips,other.cards));}
    }
   }

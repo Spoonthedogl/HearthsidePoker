@@ -40,7 +40,8 @@ The ginger cat sleeps on its cushion most of the time. Rarely it stretches, lick
 
 ## At the table
 
-- Two through seven seats, 500 chips each, small/big blinds of 5/10, rotating dealer and no-limit betting.
+- Two through seven seats, 500 chips each, rotating dealer and no-limit betting.
+- **Table setup** chooses the companions' skill — **Gentle** (they make more mistakes), **Standard**, or **Sharp** (they read their hands closely) — and the kind of evening: a **Steady table** at 5/10 all night, **Rising blinds** that climb every four hands from 5/10 to 15/30 as the fire burns down, or **High stakes** at 10/20. The session line always shows the current blinds, and a rise is announced at the table.
 - Fold, check, call, raise, and all in. The raise control is the **total wager for the current betting round**.
 - Standard best-five-of-seven evaluation, ties, side pots, uncalled returns, and correct short-all-in reopening rules.
 - Opponents make decisions from their own cards, the public board and betting state. They do not inspect your cards or the deck order.
@@ -57,7 +58,9 @@ An evening at Hearthside is twelve hands. When the last one is played the fire h
 
 Whatever you finish above the stack you sat down with is yours, less a part-cost for each time you bought back in, and everyone drops something in the kitty besides. It all goes into the **club fund** — and the fund goes back into the room: bank the hearth, trim the mantel candles, refill the lanterns, set a candle by your elbow, add a reading lamp, buy the cat a better cushion. The room gets warmer and brighter the longer the club runs.
 
-Nothing is ever locked behind the fund. No companion, table size or feature is gated; it is all just atmosphere. A bad evening earns less, never less than nothing, and the room never goes backwards. Open **The club fund** in the footer at any time.
+Nothing is ever locked behind the fund. No companion, table size or feature is gated; it is all just atmosphere. A bad evening earns less, never less than nothing, and the room never goes backwards. Open **The club fund** in the footer at any time; its ledger shows how many evenings you have played, your best night, and how much of the room you have built. The evening close-out marks your first evening and any night that beats your best.
+
+Swingier evenings bank more: a rising or high-stakes table, or gentler companions, tends to put more into the fund than a steady night, because a night can only ever bank upward.
 
 ## Your hand journal
 
@@ -76,7 +79,7 @@ Select a category to see an illustrative five-card outcome made using your own v
 
 ## Sound, display and comfort
 
-The cog button or Escape opens Settings. **Display** appears only in the standalone game, where its window controls do something; in a browser Settings is just **Sound & motion**. Leaving the table is kept apart from the rest: **Save & quit**, or **Quit without saving**, which asks once before it throws the evening away. There is no Save or Load button — the hand saves itself after every action. Sound controls include separate master, **cards & chips**, music, and ambience levels, mute, a chip-sound preview, and reduced motion. Display preferences save locally; changing only render quality keeps a maximized window maximized. Fullscreen fills the current monitor without changing the desktop resolution. Every sound is original and synthesized locally: felt swishes, ceramic chip clicks, wooden taps, soft card flips, a cascading win chord, quiet 76 BPM keys, rain, and hearth crackle. Preferences save locally. Sound quiets automatically when the app loses document visibility. On a phone, any touch unlocks sound, it returns by itself after a call or a switch to another app, and recent iPhones play it even with the silent switch on.
+The cog button or Escape opens Settings. **Display** appears only in the standalone game, where its window controls do something; in a browser Settings is just **Sound & motion**. Leaving the table is kept apart from the rest: **Save & quit**, or **Quit without saving**, which asks once before it throws the evening away. There is no Save or Load button — the hand saves itself after every action. Sound controls include separate master, **cards & chips**, music, and ambience levels, mute, a chip-sound preview, and reduced motion. Display preferences save locally; changing only render quality keeps a maximized window maximized. Fullscreen fills the current monitor without changing the desktop resolution. Every sound is original and synthesized locally: felt swishes, ceramic chip clicks, wooden taps, soft card flips, a cascading win chord, quiet 76 BPM keys, rain, and hearth crackle. Preferences save locally. Sound quiets automatically when the app loses document visibility. On a phone, any touch unlocks sound, it returns by itself after a call or a switch to another app, and recent iPhones play it even with the silent switch on. **Four-colour deck** gives diamonds and clubs their own colours, and **Larger text** enlarges the table's small print and the contents of every panel.
 
 Keyboard: **H** journal · **C** check/call · **F** fold · **Escape** open Settings / close current panel · **F11** / **Alt + Enter** fullscreen. Controls also support keyboard focus and tab navigation.
 
@@ -101,7 +104,7 @@ Edits to the game files take effect on the next game launch; C++ host edits need
 
 ## Verification
 
-123 automated game tests pass, covering the rules and hand guide, companion dialogue, AI behavior, cat animation, asynchronous computation, session saves and recap, seating across every table size on both the desk and portrait phone layouts, and the club fund. They include comparison against an independent exhaustive evaluator, wheel straights, ties, side pots, and legal betting. An additional 20,000 simulated hands completed while conserving all chips. Browser interaction tests cover joining, journal opening/closing, actual-card examples, rankings, raise/call/fold, complete hands, new hands, pausing, sound settings and rules. The native Unreal runtime and packaged executable both loaded successfully with no JavaScript errors. All 14 sound cues were rendered through a real audio engine and checked for output, headroom and finished-tail cleanup.
+132 automated game tests pass, covering the rules and hand guide, companion dialogue, AI behavior, cat animation, asynchronous computation, session saves and recap, seating across every table size on both the desk and portrait phone layouts, and the club fund. They include comparison against an independent exhaustive evaluator, wheel straights, ties, side pots, and legal betting. An additional 20,000 simulated hands completed while conserving all chips. Browser interaction tests cover joining, journal opening/closing, actual-card examples, rankings, raise/call/fold, complete hands, new hands, pausing, sound settings and rules. The native Unreal runtime and packaged executable both loaded successfully with no JavaScript errors. All 14 sound cues were rendered through a real audio engine and checked for output, headroom and finished-tail cleanup.
 
 To run the rules tests with Node.js: `node --test game/tests/*.test.cjs`.
 

@@ -49,16 +49,18 @@ body.compact #stage .board .card.empty{font-size:26px}
 /* No room for the deck beside a seat's cards; the teacup is worth keeping
    because tapping it is half the point of sitting down. */
 body.compact #stage .deck{display:none}
-body.compact #stage .teacup{left:690px;top:748px;transform:scale(1.3)}
+body.compact #stage .teacup{left:60px;top:896px;transform:scale(1.3)}
 /* A 508px felt still swallows the side seats, so in portrait the companions
    lean in front of the rail instead of being occluded by it. */
 body.compact #stage .seated-companion .sprite-facing{z-index:5}
-body.compact #stage .table-message{left:84px;top:642px;width:600px;height:64px;line-height:32px;font-size:26px}
+/* Narrow and just under the board: wide enough for three lines of the longest
+   message, and clear of the nameplates on either side of a full table. */
+body.compact #stage .table-message{left:249px;top:610px;width:270px;height:96px;line-height:32px;font-size:26px;overflow:hidden}
 body.compact #stage .table-message.winner-banner{font-size:28px!important}
 
 body.compact #stage .seated-companion{width:168px;height:168px}
 body.compact #stage .seated-companion .sprite{width:168px;height:168px;background-size:300% 100%}
-body.compact #stage .seated-companion .nameplate{width:200px;min-height:60px;padding:9px 8px;border-radius:6px}
+body.compact #stage .seated-companion .nameplate{width:200px;min-height:60px;padding:7px 8px;border-radius:6px}
 body.compact #stage .seated-companion .nameplate strong{font-size:23px;letter-spacing:1.6px}
 body.compact #stage .seated-companion .bank{font-size:22px;margin-top:6px}
 body.compact #stage .seated-companion .bank .chip-symbol{font-size:22px}
@@ -95,7 +97,9 @@ body.compact #stage .session-record{font-size:19px;margin-top:6px}
 body.compact #stage .hand-peek,body.compact #stage.seated .hand-peek{left:392px;top:1032px;max-width:340px;padding:10px 16px}
 body.compact #stage .hand-peek strong{font-size:32px;margin:8px 0 9px}
 body.compact #stage .hand-peek #handSource{font-size:22px}
-body.compact .hand-peek>span:last-child{font-size:24px}
+/* table-life.css sets this for a seated table with #stage.seated, which outranked
+   the portrait size and left "Hand details" at about 5px on a phone. */
+body.compact #stage.seated .hand-peek>span:last-child,body.compact .hand-peek>span:last-child{font-size:24px}
 
 body.compact #stage .action-bar{left:24px;right:24px;bottom:116px;flex-direction:column;align-items:stretch;gap:16px;padding-top:18px}
 body.compact .turn-label{font-size:20px;letter-spacing:2px}
@@ -216,3 +220,17 @@ body.compact #recapContent h3{font-size:28px}
 body.compact .log-list{font-size:23px;line-height:1.5}
 body.compact .log-list li{padding:12px 2px}
 body.compact .log-list .log-street{font-size:18px;letter-spacing:2.4px;gap:12px}
+body.compact .club-ledger{gap:12px;margin:8px 0 22px}
+body.compact .club-ledger>div{padding:14px}
+body.compact .club-ledger strong{font-size:32px}
+body.compact .club-ledger .chip-symbol{font-size:26px}
+body.compact #eveningClose .evening-best{font-size:25px}
+body.compact.large-text .turn-label small{font-size:29px}
+body.compact.large-text #stage .session-info{font-size:26px}
+body.compact.large-text .eyebrow,body.compact.large-text .wallet .eyebrow{font-size:25px}
+body.compact.large-text #stage .hand-peek #handSource{font-size:26px}
+body.compact.large-text footer button{font-size:27px}
+body.compact.large-text .your-label{font-size:25px}
+body.compact.large-text #stage .seated-companion .status{font-size:21px}
+body.compact.large-text #stage .seated-companion .bank{font-size:25px}
+body.compact.large-text #stage.seated .hand-peek>span:last-child{font-size:28px}

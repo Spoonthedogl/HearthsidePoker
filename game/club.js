@@ -138,7 +138,14 @@
     return multiplier;
   }
 
+  // The club so far, for the ledger. Read-only, and derived entirely from what
+  // the fund already keeps: showing it changes nothing about how it works.
+  function ledger(state) {
+    var s = restore(state);
+    return {evenings: s.evenings, bestNight: s.bestTakeHome, comforts: s.owned.length, comfortsTotal: CATALOGUE.length};
+  }
+
   return {EVENING_HANDS: EVENING_HANDS, KITTY: KITTY, REBUY_COST: REBUY_COST, catalogue: CATALOGUE.slice(),
     fresh: fresh, restore: restore, owns: owns, buy: buy, takeHome: takeHome, eveningTotal: eveningTotal,
-    endEvening: endEvening, lights: lights, catLiveliness: catLiveliness};
+    endEvening: endEvening, lights: lights, catLiveliness: catLiveliness, ledger: ledger};
 });

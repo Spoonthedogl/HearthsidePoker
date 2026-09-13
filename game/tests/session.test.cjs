@@ -46,3 +46,11 @@ test('a hand counts once however many times its result is replayed',()=>{
  assert(flat.counted,'a hand you broke even on still counts as played');
  assert.deepEqual(flat.record,{wins:1,losses:1,net:40,lastHand:3});
 });
+test('difficulty and the evening\'s current blinds come back with a saved hand',()=>{let t=new Poker.Table({names:['You','Juniper','Luna'],difficulty:'sharp'});t.smallBlind=10;t.bigBlind=20;t.newHand();
+ let back=S.unpack(S.pack(t,evening(t))).table;
+ assert.equal(back.difficulty,'sharp');assert.equal(back.bigBlind,20);assert.equal(back.smallBlind,10);assert.equal(back.minRaise,20);
+ let legacy=S.pack(t,evening(t));delete legacy.table.difficulty;assert.equal(S.unpack(legacy).table.difficulty,'standard','older saves play at the table they always had');
+ let odd=S.pack(t,evening(t));odd.table.difficulty='ruthless';assert.throws(()=>S.unpack(odd),/Invalid saved difficulty/);});
+test('an unknown difficulty is standard, and the AI is told which one it is',()=>{
+ assert.equal(new Poker.Table({difficulty:'ruthless'}).difficulty,'standard');
+ assert.deepEqual(Poker.DIFFICULTIES,['gentle','standard','sharp']);});
