@@ -176,7 +176,15 @@
   // instead of being stretched into streaks by a portrait box.
   fitMotes=function(){var box=HearthSeating.STAGE[seatVariant()];if(cv.width===box.width&&cv.height===box.height)return;cv.width=box.width;cv.height=box.height;motes.length=0;for(var i=0;i<24;i++)motes.push({x:Math.random()*box.width,y:Math.random()*box.height,r:1+Math.random()*2,s:.1+Math.random()*.16,p:Math.random()*6});};
   fitMotes();
-  var frames=0;function frame(){requestAnimationFrame(frame);if(++frames%2||$('reducedMotion').checked||document.hidden)return;ctx.clearRect(0,0,cv.width,cv.height);motes.forEach(function(m){m.y-=m.s;m.x+=Math.sin(frames*.002+m.p)*.13;if(m.y<0)m.y=cv.height;ctx.fillStyle='rgba(242,203,134,'+(.10+.10*Math.sin(frames*.013+m.p))+')';ctx.fillRect(Math.floor(m.x/2)*2,Math.floor(m.y/2)*2,2,2);});}frame();}atmosphere();
+  var frames=0,motion=$('reducedMotion'),painted=false;
+  function frame(){requestAnimationFrame(frame);
+   // Nothing to animate behind a modal, on a hidden tab, or in gentle motion.
+   // Clearing once on the way in stops the last motes freezing mid-air.
+   if(motion.checked||document.hidden||paused()){if(painted){ctx.clearRect(0,0,cv.width,cv.height);painted=false;}return;}
+   if(++frames%2)return;
+   ctx.clearRect(0,0,cv.width,cv.height);painted=true;
+   motes.forEach(function(m){m.y-=m.s;m.x+=Math.sin(frames*.002+m.p)*.13;if(m.y<0)m.y=cv.height;ctx.fillStyle='rgba(242,203,134,'+(.10+.10*Math.sin(frames*.013+m.p))+')';ctx.fillRect(Math.floor(m.x/2)*2,Math.floor(m.y/2)*2,2,2);});}
+  frame();}atmosphere();
  window.hearth={table:table,audio:audio,companions:companions,cat:cat,ambience:ambience,computation:computation,saveSession:saveSession,openJournal:openJournal,closeAll:closeAll,getState:function(){return {started:started,joining:joining,activeSeat:activeSeat,busy:busy,paused:paused(),visibleBoard:visibleBoard.map(function(c){return Object.assign({},c);}),revealed:revealed,visiblePot:visiblePot,visibleSeats:visibleSeats.map(function(p){return Object.assign({},p);}),companionSpeech:companions.getState()};}};
  var companionClock=Date.now();setInterval(function(){var now=Date.now();var context=companionContext();companions.tick(now-companionClock,context);cat.tick(now-companionClock,{hidden:context.hidden,paused:context.paused,gentle:$('reducedMotion').checked});ambience.setPaused(context.paused);companionClock=now;},80);document.addEventListener('visibilitychange',function(){companionClock=Date.now();companions.tick(0,companionContext());syncScenePause();});
  configureSeats();applyComforts();$('stage').style.setProperty('--pace',HearthSession.paceFactor(pace));syncSettings();companions.clear();render();setTimeout(function(){if(!started)companions.handle({type:'greeting'},companionContext());},600);
