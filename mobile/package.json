@@ -1,0 +1,21 @@
+{
+  "name": "hearthside-mobile",
+  "version": "1.5.0",
+  "private": true,
+  "description": "Capacitor wrapper that packages the Hearthside web game as an installable Android app.",
+  "type": "module",
+  "scripts": {
+    "sync-web": "node sync-web.mjs",
+    "assets": "capacitor-assets generate --android --assetPath assets",
+    "copy": "npm run sync-web && cap copy android",
+    "apk": "npm run sync-web && cap sync android && cd android && gradlew.bat assembleRelease"
+  },
+  "dependencies": {
+    "@capacitor/android": "^7.0.0",
+    "@capacitor/core": "^7.0.0"
+  },
+  "devDependencies": {
+    "@capacitor/assets": "^3.0.5",
+    "@capacitor/cli": "^7.0.0"
+  }
+}

@@ -1,5 +1,39 @@
 # Changelog
 
+## v1.5.0 — 2026-09-13
+
+Play it on your phone. The same game now installs as an Android app and adds to
+an iPhone or iPad home screen, and the browser version plays offline.
+
+**Save compatibility:** unaffected. The game rules, saves and club fund are
+exactly as in v1.4.0 — this release only adds new ways to install and run it.
+
+### Added
+
+- **An Android app.** A real, installable app (a signed APK on the releases
+  page) that bundles the whole game and runs offline, with no account, store or
+  internet connection. You install it by opening the file on the phone; Android
+  asks once to allow it. The app is the same game as the browser and Windows
+  versions, wrapped for the phone.
+- **Add to Home Screen, on iPhone and iPad.** Open the web link in Safari, tap
+  Share, then Add to Home Screen: the game installs with the fox icon and opens
+  full-screen like an app. (Apple does not allow a free, shareable app file, so
+  this is the free way onto an iPhone — no Mac or developer account needed.)
+- **Offline play in the browser.** Once the web version has been opened, it
+  keeps working with no connection, on a phone or a computer.
+- **The web version is published automatically.** A workflow puts the playable
+  game online whenever the game changes, so there is always a link to share.
+
+### Fixed
+
+- **The table fits the screen the moment the app opens.** On the very first
+  launch of the installed app the table could appear mis-sized or off to one
+  side until the phone was rotated, because the app's window finished resizing a
+  breath after the game had already measured it. The game now watches its own
+  window and fits itself on the first frame.
+
+---
+
 ## v1.4.0 — 2026-09-13
 
 Choose how your evening plays, keep a ledger of the club, and two new ways to
