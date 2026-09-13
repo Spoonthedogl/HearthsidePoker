@@ -52,6 +52,12 @@
  // Re-check after layout settles: setting the viewport meta above can change
  // the layout viewport without firing a resize.
  addEventListener('resize',applyMode);addEventListener('orientationchange',applyMode);addEventListener('load',applyMode);applyMode();requestAnimationFrame(applyMode);
+ // A WebView (such as the installed Android app) can resize its viewport a
+ // moment after load — when the splash screen clears — without firing a window
+ // resize. Watch the layout viewport itself so the table is fitted to the
+ // screen on the very first frame, not only after the first rotation.
+ if(window.ResizeObserver){try{new ResizeObserver(applyMode).observe(document.documentElement);}catch(e){}}
+ if(window.visualViewport){visualViewport.addEventListener('resize',applyMode);}
  function safeStore(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}}
  try{restore=JSON.parse(localStorage.getItem('hearthside-session')||'null');if(restore&&restore.version===2){try{HearthSession.unpack(restore);}catch(err){restore=null;savedHandLost=err.message;}}var prefs=JSON.parse(localStorage.getItem('hearthside-settings')||'null');if(prefs){pace=["relaxed","normal","brisk"].includes(prefs.pace)?prefs.pace:"normal";audio.setMaster(prefs.master);audio.setMusic(prefs.music);audio.setAmbience(prefs.ambience);audio.setEffects(prefs.effects);audio.setMuted(prefs.muted);$('reducedMotion').checked=!!prefs.gentle;$('stage').classList.toggle('gentle',!!prefs.gentle);$('fourColour').checked=!!prefs.fourColour;document.body.classList.toggle('four-colour',!!prefs.fourColour);$('largeText').checked=!!prefs.largeText;document.body.classList.toggle('large-text',!!prefs.largeText);}}catch(e){}
  var settingsSaveTimer=null;
