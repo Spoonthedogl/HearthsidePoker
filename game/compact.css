@@ -95,7 +95,9 @@ body.compact #stage .session-record{font-size:19px;margin-top:6px}
 body.compact #stage .hand-peek,body.compact #stage.seated .hand-peek{left:392px;top:1032px;max-width:340px;padding:10px 16px}
 body.compact #stage .hand-peek strong{font-size:32px;margin:8px 0 9px}
 body.compact #stage .hand-peek #handSource{font-size:22px}
-body.compact .hand-peek>span:last-child{font-size:24px}
+/* table-life.css sets this for a seated table with #stage.seated, which outranked
+   the portrait size and left "Hand details" at about 5px on a phone. */
+body.compact #stage.seated .hand-peek>span:last-child,body.compact .hand-peek>span:last-child{font-size:24px}
 
 body.compact #stage .action-bar{left:24px;right:24px;bottom:116px;flex-direction:column;align-items:stretch;gap:16px;padding-top:18px}
 body.compact .turn-label{font-size:20px;letter-spacing:2px}
@@ -221,3 +223,12 @@ body.compact .club-ledger>div{padding:14px}
 body.compact .club-ledger strong{font-size:32px}
 body.compact .club-ledger .chip-symbol{font-size:26px}
 body.compact #eveningClose .evening-best{font-size:25px}
+body.compact.large-text .turn-label small{font-size:29px}
+body.compact.large-text #stage .session-info{font-size:26px}
+body.compact.large-text .eyebrow,body.compact.large-text .wallet .eyebrow{font-size:25px}
+body.compact.large-text #stage .hand-peek #handSource{font-size:26px}
+body.compact.large-text footer button{font-size:27px}
+body.compact.large-text .your-label{font-size:25px}
+body.compact.large-text #stage .seated-companion .status{font-size:21px}
+body.compact.large-text #stage .seated-companion .bank{font-size:25px}
+body.compact.large-text #stage.seated .hand-peek>span:last-child{font-size:28px}

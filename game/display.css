@@ -88,3 +88,16 @@ select:focus-visible{outline:3px solid #a77534;outline-offset:3px}
    their red and spades their ink; diamonds turn blue and clubs green. */
 body.four-colour .card.suit-d,body.four-colour .row-cards i.suit-d,body.four-colour .out-card.suit-d{color:#2c63a6}
 body.four-colour .card.suit-c,body.four-colour .row-cards i.suit-c,body.four-colour .out-card.suit-c{color:#2b7443}
+/* Larger text. The small print on the table grows in place; panels and the
+   journal scale their contents with zoom while keeping their own size, so the
+   text reflows inside them and nothing is pushed off the screen. */
+body.large-text .turn-label small{font-size:15px}
+body.large-text .session-info{font-size:14px}
+body.large-text .eyebrow{font-size:13px}
+body.large-text #stage .hand-peek #handSource{font-size:14px}
+body.large-text footer button{font-size:14px}
+body.large-text .your-label{font-size:13px}
+body.large-text #stage .seated-companion .status{font-size:11px}
+body.large-text #stage .seated-companion .bank{font-size:14px}
+body.large-text #journal .journal-body,body.large-text .small-modal>:not(.close){zoom:1.18}
+body.large-text #stage.seated .hand-peek>span:last-child{font-size:13px}
