@@ -37,9 +37,19 @@ The ginger cat sleeps on its cushion most of the time. Rarely it stretches, lick
 - Standard best-five-of-seven evaluation, ties, side pots, uncalled returns, and correct short-all-in reopening rules.
 - Opponents make decisions from their own cards, the public board and betting state. They do not inspect your cards or the deck order.
 - The game waits for you; there is no turn timer. Opponents also pause while a journal or settings dialog is open.
-- Unfinished hands save automatically, including cards, deck order, bets and whose turn it is. **Return to the table** continues the same hand and pending reveals. **Fresh table** resets every selected seat.
+- Run out of chips and you can simply buy back in; the evening carries on. Companions who bust buy back in by themselves, so the table never empties.
+- Win a showdown holding a Jack and a Two and the rest of the table chips in a small bonus. No chips are created: it only ever moves between stacks.
+- Unfinished hands save automatically, including cards, deck order, bets and whose turn it is. **Return to the table** continues the same hand and pending reveals. **Save** and **Load** sit in Settings alongside **Save & quit**.
 - Choose **Relaxed**, **Normal**, or **Brisk** pacing. Brief opponent action labels and moving chips make bets easier to follow.
-- The showdown recap highlights the winning five cards and explains ranks, kickers, ties and side pots. **Review hand** reopens it.
+- The showdown recap lists every hand that reached showdown, strongest first, so you can see what everyone held without leaving the screen. **Review hand** reopens it.
+
+## Evenings and the club fund
+
+An evening at Hearthside is twelve hands. When the last one is played the fire has burned low, and the table settles up.
+
+Whatever you finish above the stack you sat down with is yours, less a part-cost for each time you bought back in, and everyone drops something in the kitty besides. It all goes into the **club fund** — and the fund goes back into the room: bank the hearth, trim the mantel candles, refill the lanterns, set a candle by your elbow, add a reading lamp, buy the cat a better cushion. The room gets warmer and brighter the longer the club runs.
+
+Nothing is ever locked behind the fund. No companion, table size or feature is gated; it is all just atmosphere. A bad evening earns less, never less than nothing, and the room never goes backwards. Open **The club fund** in the footer at any time.
 
 ## Your hand journal
 
@@ -81,13 +91,13 @@ Edits to the game files take effect on the next game launch; C++ host edits need
 
 ## Verification
 
-68 automated game tests pass (26 rules/guide, 8 dialogue, 9 AI behavior, 8 cat animation, 7 asynchronous computation and 10 session/recap checks), including comparison against an independent exhaustive evaluator, wheel straights, ties, side pots, and legal betting. An additional 20,000 simulated hands completed while conserving all chips. Browser interaction tests cover joining, journal opening/closing, actual-card examples, rankings, raise/call/fold, complete hands, new hands, pausing, sound settings and rules. The native Unreal runtime and packaged executable both loaded successfully with no JavaScript errors. All 14 sound cues were rendered through a real audio engine and checked for output, headroom and finished-tail cleanup.
+103 automated game tests pass, covering the rules and hand guide, companion dialogue, AI behavior, cat animation, asynchronous computation, session saves and recap, seating across every table size, and the club fund. They include comparison against an independent exhaustive evaluator, wheel straights, ties, side pots, and legal betting. An additional 20,000 simulated hands completed while conserving all chips. Browser interaction tests cover joining, journal opening/closing, actual-card examples, rankings, raise/call/fold, complete hands, new hands, pausing, sound settings and rules. The native Unreal runtime and packaged executable both loaded successfully with no JavaScript errors. All 14 sound cues were rendered through a real audio engine and checked for output, headroom and finished-tail cleanup.
 
 To run the rules tests with Node.js: `node --test game/tests/*.test.cjs`.
 
 This is a complete playable prototype: two table sizes, six selectable companions and local single-player sessions. It does not include network multiplayer, controller navigation, localization or a broader campaign.
 
-Display validation also covers actual native render textures at 100%, 85% and 70%, maximize, fullscreen shortcuts, trusted pointer clicks after scaling, and saved settings across a relaunch. Thirteen additional ambient-rendering and audio-preparation checks pass, for 81 total. Audio prepares silently during loading so opening the device does not interrupt the first click; sound still begins only after interaction. See **PERFORMANCE.md** for measurements and their limits, and **TABLE_IMPROVEMENTS.md** for the settings, pacing, recap and session-save revision. Native Save & quit was verified across separate processes with the complete saved table matching after relaunch.
+Display validation also covers actual native render textures at 100%, 85% and 70%, maximize, fullscreen shortcuts, trusted pointer clicks after scaling, and saved settings across a relaunch. Ambient-rendering and audio-preparation checks pass alongside the game suite. Audio prepares silently during loading so opening the device does not interrupt the first click; sound still begins only after interaction. See **PERFORMANCE.md** for measurements and their limits, and **TABLE_IMPROVEMENTS.md** for the settings, pacing, recap and session-save revision. Native Save & quit was verified across separate processes with the complete saved table matching after relaunch.
 
 ## Art, audio and cost
 
@@ -95,7 +105,7 @@ No assets or subscriptions were purchased, and no paid API calls were made. The 
 
 Rules were checked against the [Poker TDA rules](https://www.pokertda.com/view-poker-tda-rules/) and [Texas Hold’em rules](https://www.pokerstars.com/poker/games/texas-holdem/). Audio gesture behavior follows the [Web Audio AudioContext API](https://developer.mozilla.org/en-US/docs/Web/API/AudioContext).
 
-See **WOODLAND_EXPANSION.md** for table setup, the expanded roster, hover reactions and rare cat animation. The latest suite passes 84 checks including audio preparation.
+See **WOODLAND_EXPANSION.md** for table setup, the expanded roster, hover reactions and rare cat animation.
 
 The opening Reedbank story/notebook chapter has been pulled from the live game while it's reworked; its code and docs are kept in `disabled-lore-feature-archive/` for now, not shipped in `game/`.
 
