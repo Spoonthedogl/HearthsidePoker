@@ -25,7 +25,25 @@ for(let count=2;count<=7;count++){
   }
   if(count>=4){assert(layout.some(s=>s.body.x<200));assert(layout.some(s=>s.body.x>900));}
  });
+ test(count+' players: the portrait phone layout also keeps every seat readable',()=>{
+  const stage=Seats.STAGE.compact,layout=Seats.layout(count,'compact').slice(1);
+  const board={x:203,y:515,width:362,height:92};
+  for(const seat of layout){
+   for(const box of [seat.body,seat.label,seat.cards,seat.chips]){assert(box.x>=0&&box.y>=0&&box.x+box.width<=stage.width&&box.y+box.height<=stage.height,'A seat box leaves the portrait stage');}
+   assert(!overlaps(seat.cards,board),'Opponent cards cover the board');
+   assert(!overlaps(seat.label,board),'A nameplate covers the board');
+   for(const other of layout){
+    assert(!overlaps(seat.cards,other.label),'A nameplate covers cards');
+    if(other.id!==seat.id){assert(!overlaps(seat.label,other.label));assert(!overlaps(seat.cards,other.cards));assert(!overlaps(seat.chips,other.cards));}
+   }
+  }
+ });
 }
+test('the portrait stage is taller than it is wide, and the wide one is not',()=>{
+ assert(Seats.STAGE.compact.height>Seats.STAGE.compact.width);
+ assert(Seats.STAGE.wide.width>Seats.STAGE.wide.height);
+ assert.deepEqual(Seats.layout(4),Seats.layout(4,'wide'),'the default stays the desk layout');
+});
 test('seven players preserve all-in side pots with unequal stacks',()=>{
  const t=new P.Table({names:cast,random:seeded(83)});[50,100,200,350,500,800,1500].forEach((n,i)=>t.players[i].stack=n);t.newHand();while(!t.result)t.act(t.actor,'allin');
  assert(t.result.pots.length>=6);assert.equal(t.players.reduce((n,p)=>n+p.stack,0),3500);assert.deepEqual(S.unpack(S.pack(t,ui(t))).table.result,t.result);

@@ -121,11 +121,20 @@
     // Half-resolution backing buffer gives the movement crisp, two-pixel edges.
     this.canvas.width = Math.ceil(width / 2);
     this.canvas.height = Math.ceil(height / 2);
-    this._scale = Math.max(width / SOURCE_WIDTH, height / SOURCE_HEIGHT);
+    // 'width' matches a portrait stage painting the room as a top band; the
+    // lights have to crop exactly the way the room art behind them does.
+    this._scale = this._fit === 'width' ? width / SOURCE_WIDTH : Math.max(width / SOURCE_WIDTH, height / SOURCE_HEIGHT);
     this._offsetX = (width - SOURCE_WIDTH * this._scale) / 2;
-    this._offsetY = (height - SOURCE_HEIGHT * this._scale) / 2;
+    this._offsetY = this._fit === 'width' ? 0 : (height - SOURCE_HEIGHT * this._scale) / 2;
     this._buildDirtyRects();
     this._draw(this._gentle ? 0 : this._time, this._gentle);
+  };
+
+  HearthAmbience.prototype.setFit = function (fit) {
+    if (this._fit === fit) return;
+    this._fit = fit;
+    this._width = 0;
+    this._resize();
   };
 
   HearthAmbience.prototype._buildGlowStamps = function () {

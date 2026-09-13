@@ -10,6 +10,14 @@ Click **Take a seat**. This first click also starts the original music and ambie
 
 You can also use **Launch Game.cmd** in this project folder to play through the installed Unreal Engine, or open **HearthsidePoker.uproject** / **Open Unreal Editor.cmd** and press **Play** to edit and test the project.
 
+## Phones and tablets
+
+The same `game/` folder is a self-contained web build: serve it over any static web server and it plays in a browser, with the club fund saved to that browser's local storage.
+
+On a portrait phone the table re-deals itself down the screen instead of shrinking the desk layout. The stage switches from its 1440 × 900 design space to a portrait 768 × 1408 one, drawn at roughly double size so it lands at readable text and thumb-sized buttons once scaled to the screen: companions ring a taller oval, each one's nameplate and cards stacked against its own body, and the community cards, your hand and the betting buttons run down the middle. Nothing reflows, because the layout is still absolute — it is a second set of coordinates, not a second layout engine.
+
+This turns on below 560px on the short edge, in portrait. Tablets and desktop browsers keep the desk layout untouched. A phone held in landscape is asked to turn upright, and can tap through to the desk layout anyway. Screen mode, window size and frame rate belong to the standalone build, so Settings on a phone is just sound and motion.
+
 ## Seated cast and table sizes
 
 Table setup supports every size from 2 to 7 total players. Seats follow clockwise order around the oval, with the human at the near edge. All six companions have full seated artwork, visible chairs, and three distinct mood poses. Right-side guests face inward; near-side guests appear in front of the rail. Clipper now wears a navy double-breasted jacket and copper cravat, with low pince-nez on his snout. See **SEATED_TABLE_UPDATE.md** and **SEATED_ART_PROMPTS.md**.
@@ -91,7 +99,7 @@ Edits to the game files take effect on the next game launch; C++ host edits need
 
 ## Verification
 
-103 automated game tests pass, covering the rules and hand guide, companion dialogue, AI behavior, cat animation, asynchronous computation, session saves and recap, seating across every table size, and the club fund. They include comparison against an independent exhaustive evaluator, wheel straights, ties, side pots, and legal betting. An additional 20,000 simulated hands completed while conserving all chips. Browser interaction tests cover joining, journal opening/closing, actual-card examples, rankings, raise/call/fold, complete hands, new hands, pausing, sound settings and rules. The native Unreal runtime and packaged executable both loaded successfully with no JavaScript errors. All 14 sound cues were rendered through a real audio engine and checked for output, headroom and finished-tail cleanup.
+110 automated game tests pass, covering the rules and hand guide, companion dialogue, AI behavior, cat animation, asynchronous computation, session saves and recap, seating across every table size on both the desk and portrait phone layouts, and the club fund. They include comparison against an independent exhaustive evaluator, wheel straights, ties, side pots, and legal betting. An additional 20,000 simulated hands completed while conserving all chips. Browser interaction tests cover joining, journal opening/closing, actual-card examples, rankings, raise/call/fold, complete hands, new hands, pausing, sound settings and rules. The native Unreal runtime and packaged executable both loaded successfully with no JavaScript errors. All 14 sound cues were rendered through a real audio engine and checked for output, headroom and finished-tail cleanup.
 
 To run the rules tests with Node.js: `node --test game/tests/*.test.cjs`.
 

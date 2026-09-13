@@ -27,7 +27,21 @@
  var suit={s:'♠',h:'♥',d:'♦',c:'♣'},rank={11:'J',12:'Q',13:'K',14:'A'};
  var descriptions=['Your highest cards, when no stronger pattern is made.','Two cards of the same rank.','Two different pairs of matching ranks.','Three cards of the same rank.','Five consecutive ranks. An ace can be low or high.','Five cards of the same suit, in any order.','Three of one rank, plus a pair of another.','Four cards of the same rank.','Five consecutive ranks, all in the same suit.'];
  var examples=[['As','Jh','9c','6d','3s'],['Kh','Ks','9c','6d','3s'],['Kh','Ks','9c','9d','3s'],['7h','7s','7c','Kd','3s'],['9h','8s','7c','6d','5s'],['Ah','Jh','8h','6h','3h'],['Qh','Qs','Qc','8d','8s'],['5h','5s','5c','5d','As'],['9h','8h','7h','6h','5h']];
- function resize(){var scale=Math.min(innerWidth/1440,innerHeight/900);$('stage').style.transform='translate(-50%,-50%) scale('+scale+')';}addEventListener('resize',resize);resize();
+ // A phone-sized screen swaps the whole stage to the portrait design space
+ // rather than shrinking the desk layout, which would leave 4px text.
+ var compact=null,seatsMounted=false,rotateDismissed=false,fitMotes=function(){};
+ function seatVariant(){return compact?'compact':'wide';}
+ function touchDevice(){return matchMedia('(pointer:coarse)').matches;}
+ function resize(){var box=HearthSeating.STAGE[seatVariant()];$('stage').style.transform='translate(-50%,-50%) scale('+Math.min(innerWidth/box.width,innerHeight/box.height)+')';}
+ function applyMode(){
+  var narrow=Math.min(innerWidth,innerHeight)<=560,portrait=innerHeight>=innerWidth,want=narrow&&portrait;
+  if(portrait)rotateDismissed=false;
+  $('rotateHint').classList.toggle('hidden',!(narrow&&!portrait&&touchDevice())||rotateDismissed);
+  if(want!==compact){compact=want;document.body.classList.toggle('compact',compact);ambience.setFit(compact?'width':'cover');fitMotes();if(seatsMounted){configureSeats();render();}}
+  resize();
+ }
+ $('rotateHint').addEventListener('click',function(){rotateDismissed=true;this.classList.add('hidden');});
+ addEventListener('resize',applyMode);addEventListener('orientationchange',applyMode);applyMode();
  function safeStore(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}}
  try{restore=JSON.parse(localStorage.getItem('hearthside-session')||'null');if(restore&&restore.version===2){try{HearthSession.unpack(restore);}catch(err){restore=null;console.warn('Saved hand unavailable: '+err.message);}}var prefs=JSON.parse(localStorage.getItem('hearthside-settings')||'null');if(prefs){pace=["relaxed","normal","brisk"].includes(prefs.pace)?prefs.pace:"normal";audio.setMaster(prefs.master);audio.setMusic(prefs.music);audio.setAmbience(prefs.ambience);audio.setMuted(prefs.muted);$('reducedMotion').checked=!!prefs.gentle;$('stage').classList.toggle('gentle',!!prefs.gentle);}}catch(e){}
  function saveSettings(){var p=audio.getSettings();p.gentle=$('reducedMotion').checked;p.pace=pace;safeStore('hearthside-settings',p);}
@@ -48,7 +62,7 @@
   if(e.type==='result'){visibleSeats.forEach(function(p,id){p.stack=table.players[id].stack;p.bet=0;});companions.handle({type:'result',winnerIds:e.result.winners.filter(function(w){return w.wonAmount>0;}).map(function(w){return w.id;})},companionContext());}
  }
  function burst(x,y,count){if($('reducedMotion').checked)return;for(var i=0;i<count;i++){var p=document.createElement('span');p.className='particle';p.textContent=i%3?'✦':'◉';p.style.left=x+'px';p.style.top=y+'px';p.style.setProperty('--dx',(Math.random()-.5)*260+'px');p.style.setProperty('--dy',(-40-Math.random()*170)+'px');p.style.animationDelay=(i*.025)+'s';$('particles').appendChild(p);setTimeout(function(node){return function(){node.remove();};}(p),2000);}}
- function configureSeats(){HearthRoster.mount(table.players);companions.roster=table.players.slice(1).map(function(p){return HearthRoster.all.findIndex(function(c){return c.name===p.name;})+1;});}
+ function configureSeats(){HearthRoster.mount(table.players,seatVariant());seatsMounted=true;companions.roster=table.players.slice(1).map(function(p){return HearthRoster.all.findIndex(function(c){return c.name===p.name;})+1;});}
  function setupChoices(){HearthRoster.setup(names.slice(1));}
  function seatPoint(id){var el=$('seat'+id);return el?[Number(el.dataset.chipX),Number(el.dataset.chipY)]:[720,780];}
  function chipFlight(id){if($('reducedMotion').checked)return;var from=id===0?[720,780]:seatPoint(id);for(var i=0;i<4;i++){var p=document.createElement('span');p.className='particle';p.textContent='◉';p.style.left=from[0]+i*3+'px';p.style.top=from[1]+'px';p.style.setProperty('--dx',(755-from[0])+'px');p.style.setProperty('--dy',(483-from[1])+'px');p.style.animationDuration=(.65*HearthSession.paceFactor(pace))+'s';p.style.animationDelay=i*.045+'s';$('particles').appendChild(p);setTimeout(function(n){return function(){n.remove();};}(p),950);}}
@@ -142,7 +156,12 @@
  var npcHoverTimes={},lastNpcSound=0;
  document.addEventListener('companion-hover',function(e){if(paused()||document.hidden)return;var now=performance.now(),key=e.detail.character,el=e.target;if(now-(npcHoverTimes[key]||-9999)<4000)return;npcHoverTimes[key]=now;el.classList.remove('hover-react');void el.offsetWidth;el.classList.add('hover-react');setTimeout(function(){el.classList.remove('hover-react');},1150);if(started&&now-lastNpcSound>750){audio.play('npc_'+key,{volume:.45,pan:Number(el.dataset.pan)});lastNpcSound=now;}});
  var lastHover=0;document.addEventListener('mouseover',function(e){if(!started||!e.target.closest('button')||Date.now()-lastHover<80)return;lastHover=Date.now();sound('hover');});
- function atmosphere(){var cv=$('atmosphere'),ctx=cv.getContext('2d'),motes=[];for(var i=0;i<24;i++)motes.push({x:Math.random()*1440,y:Math.random()*900,r:1+Math.random()*2,s:.1+Math.random()*.16,p:Math.random()*6});var frames=0;function frame(){requestAnimationFrame(frame);if(++frames%2||$('reducedMotion').checked||document.hidden)return;ctx.clearRect(0,0,1440,900);motes.forEach(function(m){m.y-=m.s;m.x+=Math.sin(frames*.002+m.p)*.13;if(m.y<0)m.y=900;ctx.fillStyle='rgba(242,203,134,'+(.10+.10*Math.sin(frames*.013+m.p))+')';ctx.fillRect(Math.floor(m.x/2)*2,Math.floor(m.y/2)*2,2,2);});}frame();}atmosphere();
+ function atmosphere(){var cv=$('atmosphere'),ctx=cv.getContext('2d'),motes=[];
+  // The buffer follows the stage's design space, so motes stay square dots
+  // instead of being stretched into streaks by a portrait box.
+  fitMotes=function(){var box=HearthSeating.STAGE[seatVariant()];if(cv.width===box.width&&cv.height===box.height)return;cv.width=box.width;cv.height=box.height;motes.length=0;for(var i=0;i<24;i++)motes.push({x:Math.random()*box.width,y:Math.random()*box.height,r:1+Math.random()*2,s:.1+Math.random()*.16,p:Math.random()*6});};
+  fitMotes();
+  var frames=0;function frame(){requestAnimationFrame(frame);if(++frames%2||$('reducedMotion').checked||document.hidden)return;ctx.clearRect(0,0,cv.width,cv.height);motes.forEach(function(m){m.y-=m.s;m.x+=Math.sin(frames*.002+m.p)*.13;if(m.y<0)m.y=cv.height;ctx.fillStyle='rgba(242,203,134,'+(.10+.10*Math.sin(frames*.013+m.p))+')';ctx.fillRect(Math.floor(m.x/2)*2,Math.floor(m.y/2)*2,2,2);});}frame();}atmosphere();
  window.hearth={table:table,audio:audio,companions:companions,cat:cat,ambience:ambience,computation:computation,saveSession:saveSession,openJournal:openJournal,closeAll:closeAll,getState:function(){return {started:started,joining:joining,activeSeat:activeSeat,busy:busy,paused:paused(),visibleBoard:visibleBoard.map(function(c){return Object.assign({},c);}),revealed:revealed,visiblePot:visiblePot,visibleSeats:visibleSeats.map(function(p){return Object.assign({},p);}),companionSpeech:companions.getState()};}};
  var companionClock=Date.now();setInterval(function(){var now=Date.now();var context=companionContext();companions.tick(now-companionClock,context);cat.tick(now-companionClock,{hidden:context.hidden,paused:context.paused,gentle:$('reducedMotion').checked});ambience.setPaused(context.paused);companionClock=now;},80);document.addEventListener('visibilitychange',function(){companionClock=Date.now();companions.tick(0,companionContext());syncScenePause();});
  configureSeats();applyComforts();$('stage').style.setProperty('--pace',HearthSession.paceFactor(pace));syncSettings();companions.clear();render();setTimeout(function(){if(!started)companions.handle({type:'greeting'},companionContext());},600);
