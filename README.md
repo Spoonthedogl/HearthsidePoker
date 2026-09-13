@@ -6,7 +6,7 @@ A playable, single-player, cosy pixel-art Texas Hold’em game for Windows, buil
 
 Open **HearthsidePoker.exe** in the sibling `HearthsidePoker-Windows/Windows` folder. Keep that entire Windows folder together: the executable needs its accompanying Engine and HearthsidePoker folders. No browser, web server, internet connection or account is needed.
 
-Click **Take a seat**. This first click also starts the original music and ambience. Resize or maximize the game window; the artwork keeps its aspect ratio. Open the cog button or press **Escape** for Settings. **Display** offers Windowed, Borderless window, and Fullscreen, independent window sizes and positions, and render quality. **Sharpest (100%)** matches the backing image to the window; **85%** and **70%** trade sharpness for lighter rendering. **F11** or **Alt + Enter** toggles fullscreen. Use **Save & quit** to leave the table.
+Click **Take a seat**. This first click also starts the original music and ambience. Resize or maximize the game window; the artwork keeps its aspect ratio. Open the cog button or press **Escape** for Settings. **Display** offers Windowed, Borderless window, and Fullscreen, independent window sizes and positions, and render quality. **Sharpest (100%)** matches the backing image to the window; **85%** and **70%** trade sharpness for lighter rendering. **F11** or **Alt + Enter** toggles fullscreen. Leave with **Save & quit**, or **Quit without saving** if the evening is best forgotten.
 
 You can also use **Launch Game.cmd** in this project folder to play through the installed Unreal Engine, or open **HearthsidePoker.uproject** / **Open Unreal Editor.cmd** and press **Play** to edit and test the project.
 
@@ -47,9 +47,9 @@ The ginger cat sleeps on its cushion most of the time. Rarely it stretches, lick
 - The game waits for you; there is no turn timer. Opponents also pause while a journal or settings dialog is open.
 - Run out of chips and you can simply buy back in; the evening carries on. Companions who bust buy back in by themselves, so the table never empties.
 - Win a showdown holding a Jack and a Two and the rest of the table chips in a small bonus. No chips are created: it only ever moves between stacks.
-- Unfinished hands save automatically, including cards, deck order, bets and whose turn it is. **Return to the table** continues the same hand and pending reveals. **Save** and **Load** sit in Settings alongside **Save & quit**.
+- Unfinished hands save automatically, including cards, deck order, bets and whose turn it is. **Return to the table** continues the same hand and pending reveals. There is no Save or Load button: the hand saves itself after every action, and Settings offers **Save & quit** or **Quit without saving**.
 - Choose **Relaxed**, **Normal**, or **Brisk** pacing. Brief opponent action labels and moving chips make bets easier to follow.
-- The showdown recap lists every hand that reached showdown, strongest first, so you can see what everyone held without leaving the screen. **Review hand** reopens it.
+- **Review hand** opens the showdown recap, listing every hand that reached showdown, strongest first, so you can see what everyone held. It waits to be asked rather than interrupting each hand.
 
 ## Evenings and the club fund
 
@@ -61,7 +61,9 @@ Nothing is ever locked behind the fund. No companion, table size or feature is g
 
 ## Your hand journal
 
-Click **Hand journal**, the current-hand panel, or press **H**. Close with its ×, **H**, **Escape**, or the darkened backdrop.
+Click **Hand journal**, the current-hand panel, or press **H**. Close with its ×, **H**, **Escape**, or the darkened backdrop. Three tabs: **Your possibilities**, **This hand**, and **Hand rankings**.
+
+**This hand** writes the hand down as it happens — who dealt, the blinds, every check, call, raise and fold, each street with its cards, and the result. It only ever shows what has already been dealt at the table, never what is coming.
 
 The journal uses **only your two cards and the community cards already shown**. Gold outlines identify the best currently visible cards. Each category shows its probability of being your strongest final hand by the river. These are hand-making probabilities, not your chance of winning against opponents.
 
@@ -74,7 +76,7 @@ Select a category to see an illustrative five-card outcome made using your own v
 
 ## Sound, display and comfort
 
-The cog button or Escape opens Settings with **Sound & motion** and **Display** tabs. Sound controls include separate master, music, and ambience levels, mute, a chip-sound preview, and reduced motion. Display preferences save locally; changing only render quality keeps a maximized window maximized. Fullscreen fills the current monitor without changing the desktop resolution. Every sound is original and synthesized locally: felt swishes, ceramic chip clicks, wooden taps, soft card flips, a cascading win chord, quiet 76 BPM keys, rain, and hearth crackle. Preferences save locally. Sound quiets automatically when the app loses document visibility.
+The cog button or Escape opens Settings. **Display** appears only in the standalone game, where its window controls do something; in a browser Settings is just **Sound & motion**. Leaving the table is kept apart from the rest: **Save & quit**, or **Quit without saving**, which asks once before it throws the evening away. There is no Save or Load button — the hand saves itself after every action. Sound controls include separate master, **cards & chips**, music, and ambience levels, mute, a chip-sound preview, and reduced motion. Display preferences save locally; changing only render quality keeps a maximized window maximized. Fullscreen fills the current monitor without changing the desktop resolution. Every sound is original and synthesized locally: felt swishes, ceramic chip clicks, wooden taps, soft card flips, a cascading win chord, quiet 76 BPM keys, rain, and hearth crackle. Preferences save locally. Sound quiets automatically when the app loses document visibility. On a phone, any touch unlocks sound, it returns by itself after a call or a switch to another app, and recent iPhones play it even with the silent switch on.
 
 Keyboard: **H** journal · **C** check/call · **F** fold · **Escape** open Settings / close current panel · **F11** / **Alt + Enter** fullscreen. Controls also support keyboard focus and tab navigation.
 
@@ -99,7 +101,7 @@ Edits to the game files take effect on the next game launch; C++ host edits need
 
 ## Verification
 
-110 automated game tests pass, covering the rules and hand guide, companion dialogue, AI behavior, cat animation, asynchronous computation, session saves and recap, seating across every table size on both the desk and portrait phone layouts, and the club fund. They include comparison against an independent exhaustive evaluator, wheel straights, ties, side pots, and legal betting. An additional 20,000 simulated hands completed while conserving all chips. Browser interaction tests cover joining, journal opening/closing, actual-card examples, rankings, raise/call/fold, complete hands, new hands, pausing, sound settings and rules. The native Unreal runtime and packaged executable both loaded successfully with no JavaScript errors. All 14 sound cues were rendered through a real audio engine and checked for output, headroom and finished-tail cleanup.
+123 automated game tests pass, covering the rules and hand guide, companion dialogue, AI behavior, cat animation, asynchronous computation, session saves and recap, seating across every table size on both the desk and portrait phone layouts, and the club fund. They include comparison against an independent exhaustive evaluator, wheel straights, ties, side pots, and legal betting. An additional 20,000 simulated hands completed while conserving all chips. Browser interaction tests cover joining, journal opening/closing, actual-card examples, rankings, raise/call/fold, complete hands, new hands, pausing, sound settings and rules. The native Unreal runtime and packaged executable both loaded successfully with no JavaScript errors. All 14 sound cues were rendered through a real audio engine and checked for output, headroom and finished-tail cleanup.
 
 To run the rules tests with Node.js: `node --test game/tests/*.test.cjs`.
 
