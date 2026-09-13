@@ -86,3 +86,22 @@ test('disposed service cannot return a late result or start another request',asy
   const promise=service.analyze(hole,[]);const cancelled=assert.rejects(promise,{name:'AbortError'});service.dispose();await cancelled;
   await assert.rejects(service.analyze(hole,[]),/closed/);assert.equal(service.getStats().completed,0);
 });
+
+test('a single slow analysis does not retire the worker for the session',async()=>{
+ // A worker that never answers: the watchdog fires, the chunked fallback
+ // still produces the answer, and the next job is allowed to try the worker.
+ let built=0;
+ const stubborn=()=>{built++;return {postMessage(){},terminate(){},onmessage:null,onerror:null};};
+ const c=new Computation({workerFactory:stubborn,workerTimeoutMs:100,workerURL:'unused'});
+ const hole=[{rank:14,suit:'s'},{rank:13,suit:'s'}],board=[{rank:2,suit:'h'},{rank:7,suit:'d'},{rank:9,suit:'c'}];
+ const first=await c.analyze(hole,board,{samples:200});
+ assert(first.rows.length===9,'the fallback still answers');
+ assert.equal(c.stats.workerFailures,1);
+ assert.equal(c.workerBlocked,false,'one timeout is not enough to give up on the worker');
+ const second=await c.analyze(hole,[{rank:3,suit:'h'},{rank:7,suit:'d'},{rank:9,suit:'c'}],{samples:200});
+ assert(second.rows.length===9);
+ assert.equal(c.stats.workerFailures,2);
+ assert.equal(c.workerBlocked,true,'a second failure retires it');
+ assert.equal(built,2,'it was genuinely retried');
+ c.dispose();
+});

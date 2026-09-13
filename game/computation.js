@@ -65,9 +65,14 @@
     }
     this.chunkTimer=setTimeout(chunk,0);
   };
+  // A slow device can miss the watchdog on a job the worker would have
+  // finished, so one timeout retires the worker for that job only. Repeated
+  // failures mean it is genuinely blocked, and then we stop asking.
   HearthComputation.prototype._workerFailed=function(request){
     if(!this._isCurrent(request))return;
-    this.stats.workerFailures++;this.workerBlocked=true;this._stopWorker();this._fallback(request);
+    this.stats.workerFailures++;
+    if(this.stats.workerFailures>=(Number(this.options.workerFailureLimit)||2))this.workerBlocked=true;
+    this._stopWorker();this._fallback(request);
   };
   HearthComputation.prototype._dispatch=function(request){
     var self=this;
