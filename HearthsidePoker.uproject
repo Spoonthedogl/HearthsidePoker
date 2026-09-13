@@ -1,0 +1,9 @@
+{
+  "FileVersion": 3,
+  "EngineAssociation": "5.8",
+  "Category": "Games",
+  "Description": "Hearthside Poker — a cosy pixel-art Texas Hold'em table.",
+  "Modules": [{ "Name": "HearthsidePoker", "Type": "Runtime", "LoadingPhase": "Default" }],
+  "Plugins": [{ "Name": "WebBrowserWidget", "Enabled": true }],
+  "TargetPlatforms": ["Windows"]
+}

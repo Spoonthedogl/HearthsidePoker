@@ -1,0 +1,17 @@
+# Unreal Engine build artifacts and caches — all regenerated automatically,
+# none of this is source. Standard exclusions for a UE5 project.
+Binaries/
+Intermediate/
+DerivedDataCache/
+Saved/
+*.pdb
+
+# Editor/IDE cruft
+.vs/
+.vscode/
+*.sln
+*.suo
+
+# OS cruft
+Thumbs.db
+.DS_Store

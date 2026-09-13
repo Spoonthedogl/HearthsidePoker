@@ -1,0 +1,52 @@
+/* Full seated silhouettes sit behind the rail; readable UI sits above it. */
+#stage .seated-companion{width:300px;height:300px;z-index:auto;pointer-events:none}
+#stage .seated-companion .sprite-facing{position:absolute;inset:0;z-index:2;transform:scaleX(var(--facing,1));pointer-events:auto}
+#stage .seated-companion[data-near="true"] .sprite-facing{z-index:4}
+#stage .seated-companion .sprite{width:300px;height:300px;margin:0;background-size:300% 100%;background-position:0 0;-webkit-mask-image:none;mask-image:none;transform-origin:50% 76%}
+#stage .seated-companion[data-mood="allin"] .sprite{background-position:50% 0}
+#stage .seated-companion[data-mood="folded"] .sprite{background-position:100% 0}
+#stage .seated-companion .nameplate{left:var(--label-x);top:var(--label-y);width:164px;min-height:54px;padding:8px 6px;pointer-events:auto}
+#stage .seated-companion .nameplate strong{font-size:12px;letter-spacing:1.3px}
+#stage .seated-companion .bank{font-size:12px;margin-top:5px}
+#stage .seated-companion .persona{display:none}
+#stage .seated-companion .position-markers{left:-25px;top:0;gap:2px}
+#stage .seated-companion .position-markers span{width:23px;height:23px;font-size:9px}
+#stage .seated-companion .opponent-cards{left:var(--cards-x);top:var(--cards-y);gap:6px;transform:rotate(0);pointer-events:auto}
+#stage .seated-companion .card{width:47px;height:68px}
+#stage .seated-companion .card .corner{font-size:13px;left:3px;top:3px}
+#stage .seated-companion .card .corner.bottom{left:auto;top:auto;right:3px;bottom:3px}
+#stage .seated-companion .card .center-suit{font-size:25px}
+#stage .seated-companion.folded .opponent-cards{transform:rotate(-7deg);opacity:.25}
+#stage .seated-companion .npc-chips{left:var(--chips-x);top:var(--chips-y);transform:scale(.8);transform-origin:0 0}
+#stage .seated-companion .speech{left:var(--label-x);top:auto;bottom:calc(300px - var(--label-y) + 6px);width:164px;white-space:normal;font-size:12px;padding:5px;background:#211b17e8;border-radius:4px;pointer-events:none}
+#stage .seated-companion .speech:after{display:none}
+/* The nameplate already announces each bet; avoid a second text layer over cards. */
+#stage .seated-companion .bet-feedback{display:none}
+#stage .table-outer{left:300px;top:340px;width:840px;height:450px;border-radius:50%;clip-path:none;overflow:hidden}
+#stage .table-wood,#stage .table-felt,#stage .felt-stitch{border-radius:50%}
+#stage .table-shadow{left:302px;top:368px;width:836px;height:426px;border-radius:50%}
+#stage .board{left:504px;top:555px;gap:10px}
+#stage .board .card{width:78px;height:108px}
+#stage .street-ribbon{left:590px;top:449px;width:260px}
+#stage .pot-area{left:577px;top:472px}
+#stage .table-message{left:500px;top:511px;width:440px;height:36px;line-height:18px;font-size:14px}
+#stage .table-message.winner-banner{font-size:14px!important}
+#stage .deck{left:552px;top:685px;transform:rotate(-15deg) scale(.65)}
+#stage .teacup{left:831px;top:698px;transform:scale(.9)}
+#stage .human-seat{left:618px;top:754px}
+#stage .wallet{left:412px;top:790px}
+#stage .wallet strong{font-size:25px}
+#stage .hand-peek,#stage.seated .hand-peek{left:895px;top:784px;max-width:230px;padding:8px 12px}
+#stage .hand-peek strong{font-size:18px}
+#stage .hand-peek #handSource{font-size:10px}
+#stage .action-bar{bottom:38px}
+#stage .session-info{top:107px}
+/* Only the results list scrolls; the next-hand action stays beside its heading. */
+#stage #recap{display:flex;flex-direction:column;max-height:820px;overflow:hidden;padding-top:40px}
+#recap .recap-toolbar{display:flex;align-items:center;justify-content:space-between;gap:18px;flex-shrink:0;margin:12px 0 18px}
+#recap .recap-toolbar h2{font-size:26px;margin:0}
+#recap .recap-toolbar .primary{font-size:13px;padding:12px 16px;white-space:nowrap}
+#recapContent{overflow-y:auto;min-height:0;overscroll-behavior:contain;scrollbar-width:thin;padding-right:10px}
+#recap .recap-footer{flex-shrink:0;padding-top:14px;font-size:13px}
+
+

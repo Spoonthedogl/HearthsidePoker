@@ -1,0 +1,61 @@
+/* Hearthside art and layout revision: uncluttered table, readable companions. */
+.room{background-image:url('assets/room-v2.png')}
+.brand{gap:12px}
+.brand-mark{display:block;width:66px;height:66px;object-fit:contain;image-rendering:pixelated;filter:drop-shadow(0 3px 2px #140b0999)}
+/* All four nested outlines share a curved profile; no square skirt protrudes. */
+.table-outer{clip-path:none;border-radius:180px;overflow:hidden;box-shadow:0 8px 0 #201312,0 15px 15px #160d1060}
+.table-wood{border-radius:174px}
+.table-felt{border-radius:154px}
+.felt-stitch{border-radius:144px}
+.table-shadow{left:249px;top:410px;width:942px;height:325px;opacity:.65}
+.table-felt:after{opacity:.08}
+/* Name and bankroll stay above the silhouette, freeing felt for each hand. */
+.companion .nameplate{top:-55px;left:10px;width:190px;padding:8px 10px;background:#211d18e8;border-color:#aa885c8c;box-shadow:0 3px 0 #170f0d99}
+.nameplate strong{font-size:12px;letter-spacing:1.5px}
+.nameplate .persona{display:inline;font-size:7px;letter-spacing:1px;margin-left:6px}
+.nameplate .bank{font-size:12px;margin-top:5px;line-height:14px}
+.nameplate .status{font-size:9px;margin-left:10px}
+.nameplate .dealer-token{top:12px}
+.companion .opponent-cards{left:48px;top:253px;gap:8px;transform:rotate(-4deg)}
+.moth .opponent-cards{left:50px;top:254px;transform:rotate(3deg)}
+.frog .opponent-cards{transform:rotate(5deg)}
+.companion .card{width:53px;height:72px;border-radius:5px;border-width:2px}
+.companion .card .corner{font-size:14px;top:3px;left:4px}
+.companion .card .center-suit{font-size:27px}
+.companion .card .corner.bottom{right:4px;bottom:3px}
+.companion .card.back span{font-size:25px}
+.deck{left:353px;top:553px}
+.companion .speech{bottom:auto;top:113px;left:-164px;width:172px;padding:10px 12px;white-space:normal;font:italic 14px/1.35 Georgia;color:#f0dec0;text-shadow:none;background:#28231ceF;border:1px solid #a8895e80;border-radius:7px;box-shadow:0 4px 10px #100b0955;z-index:8;pointer-events:none;transition:opacity .25s,transform .25s;transform:translateY(4px)}
+.companion .speech:after{content:'';position:absolute;right:-6px;top:17px;width:10px;height:10px;background:#28231c;border-top:1px solid #a8895e80;border-right:1px solid #a8895e80;transform:rotate(45deg)}
+.companion .speech.show{transform:translateY(0)}
+.moth .speech{left:220px;top:85px;width:175px}
+.moth .speech:after{left:-6px;right:auto;transform:rotate(225deg)}
+.frog .speech{left:207px;top:105px;width:165px}
+.frog .speech:after{left:-6px;right:auto;transform:rotate(225deg)}
+/* Every state has its own painted frame; only public action changes the frame. */
+.companion .sprite{width:210px;height:280px;margin-left:0;background-size:300% 100%;background-position:0 0;background-repeat:no-repeat;image-rendering:pixelated;transition:filter .35s}
+.fox .sprite{background-image:url('assets/juniper-states.png')}
+.moth .sprite{background-image:url('assets/luma-states.png')}
+.frog .sprite{background-image:url('assets/moss-states.png')}
+.companion[data-mood="allin"] .sprite{background-position:50% 0;filter:drop-shadow(0 6px 3px #140b0966)}
+.companion[data-mood="folded"] .sprite{background-position:100% 0;filter:brightness(.89) saturate(.92);animation:breathe 6s ease-in-out infinite}
+.companion[data-mood="playing"] .sprite{background-position:0 0}
+.companion[data-mood="allin"] .nameplate{border-color:#e0b36d;box-shadow:0 0 18px #e7bd7530}
+.fox[data-mood="allin"] .sprite{animation:foxAllIn 1.8s ease-in-out infinite}
+.moth[data-mood="allin"] .sprite{animation:mothAllIn 2.6s ease-in-out infinite}
+.frog[data-mood="allin"] .sprite{animation:frogAllIn 2.1s ease-in-out infinite}
+@keyframes foxAllIn{50%{transform:translateY(-3px) rotate(-1deg)}}
+@keyframes mothAllIn{50%{transform:translateY(-6px) scaleX(1.03)}}
+@keyframes frogAllIn{35%{transform:translateY(1px) scaleY(.985)}65%{transform:translateY(-3px)}}
+#humanBet:empty{display:none}
+.gentle .sprite,.gentle .speech{animation:none!important;transition:none!important}
+.session-info{top:113px}
+.moth .opponent-cards{top:238px}
+/* Dedicated spaces on the felt for all three opponents and the community row. */
+.fox .opponent-cards{left:75px}
+.frog .opponent-cards{left:24px}
+.moth .opponent-cards{top:265px}
+.street-ribbon{top:480px;left:545px;width:350px;letter-spacing:2.2px}
+.pot-area{top:506px}
+.board{top:548px}
+.nameplate strong{font-size:14px}.nameplate .bank{font-size:13px}.nameplate .persona{display:none}

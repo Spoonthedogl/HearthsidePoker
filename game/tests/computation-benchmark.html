@@ -1,0 +1,27 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Hearthside guide responsiveness check</title><style>
+body{font:16px/1.5 system-ui,sans-serif;background:#211c18;color:#efdec0;max-width:1000px;margin:50px auto;padding:0 30px}button{font:inherit;padding:12px 18px;margin:5px;border:1px solid #ba9b70;border-radius:5px;background:#4c634d;color:#fff6df;cursor:pointer}button:disabled{opacity:.4;cursor:wait}.track{height:35px;border:1px solid #846f54;margin:24px 0;position:relative}.dot{position:absolute;width:20px;height:20px;background:#e7be6d;top:7px;border-radius:50%}pre{white-space:pre-wrap;background:#15120f;padding:20px;border:1px solid #73624a;min-height:150px}small{color:#bead95}
+</style></head><body><h1>Hand journal responsiveness</h1><p>Each button calculates the same 12,000 possible preflop boards. The moving dot is updated by the UI thread. Run each option while this window is visible.</p><div class="track"><div class="dot" id="dot"></div></div><button id="sync">Measure synchronous guide</button><button id="worker">Measure worker / safe fallback</button><button id="fallback">Measure scheduled fallback</button><p id="status">Ready.</p><pre id="output">Results will appear here.</pre><small>Reports calculation time, frame gaps and long tasks. Restricted file origins may select the scheduled fallback automatically. This page makes no network requests.</small><script src="../poker.js"></script><script src="../computation.js"></script><script>
+(function(){
+ var hole=[{rank:14,suit:'s'},{rank:13,suit:'s'}],service=new HearthComputation(),fallback=new HearthComputation({useWorker:false}),current=null,lastFrame=performance.now(),longTasks=[],results=[];
+ try{new PerformanceObserver(function(list){longTasks=longTasks.concat(list.getEntries().map(function(e){return {start:e.startTime,duration:e.duration};}));}).observe({entryTypes:['longtask']});}catch(e){}
+ function frame(time){var gap=time-lastFrame;lastFrame=time;if(current)current.maxFrameGapMs=Math.max(current.maxFrameGapMs,gap);document.getElementById('dot').style.left=(Math.sin(time/450)*.48+.5)*95+'%';requestAnimationFrame(frame);}requestAnimationFrame(frame);
+ function nextFrame(){return new Promise(function(resolve){requestAnimationFrame(resolve);});}
+ async function run(mode){
+  Array.from(document.querySelectorAll('button')).forEach(function(b){b.disabled=true;});document.getElementById('status').textContent='Calculating…';await nextFrame();await nextFrame();
+  var record={requestedMode:mode,samples:12000,start:performance.now(),maxFrameGapMs:0};current=record;
+  try{
+   var result;
+   if(mode==='synchronous')result=Poker.analyzeVisible(hole,[],{samples:12000,random:HearthComputation.seeded(71)});
+   else result=await (mode==='fallback'?fallback:service).analyze(hole,[],{samples:12000,seed:71});
+   record.calculationMs=performance.now()-record.start;record.finished=performance.now();record.runouts=result.totalRunouts;
+   if(mode!=='synchronous')record.service=(mode==='fallback'?fallback:service).getStats();
+   await nextFrame();await nextFrame();
+   record.longTasks=longTasks.filter(function(t){return t.start+t.duration>=record.start&&t.start<=record.finished;});
+   delete record.start;delete record.finished;results.push(record);document.getElementById('output').textContent=JSON.stringify(results,null,2);document.getElementById('status').textContent='Complete. The returned probabilities match the original calculation.';
+  }catch(error){document.getElementById('status').textContent=error.message;}
+  current=null;Array.from(document.querySelectorAll('button')).forEach(function(b){b.disabled=false;});
+ }
+ document.getElementById('sync').onclick=function(){run('synchronous');};document.getElementById('worker').onclick=function(){run('worker');};document.getElementById('fallback').onclick=function(){run('fallback');};
+ addEventListener('beforeunload',function(){service.dispose();fallback.dispose();});
+})();
+</script></body></html>

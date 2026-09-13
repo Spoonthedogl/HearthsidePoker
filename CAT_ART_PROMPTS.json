@@ -1,0 +1,136 @@
+{
+  "reference": "C:/Users/benff/Documents/Codex/2026-09-12/unreal-engine-5-and-blender-are/outputs/HearthsidePoker/game/assets/room-v2.png",
+  "roomPrompt": "Edit this exact 1536x1024 pixel-art room image. Remove ONLY the small curled ginger cat on the rear windowsill, approximately x398 to489 and y207 to251. Leave the green tartan cushion and its fringe exactly where they are, reconstruct the tiny area of cushion/window background formerly hidden by the cat, and keep the windowsill empty there. Keep every other part of the image unchanged: identical camera, crop, size, pixel-art texture, room colors, lights, rain window, fireplace, lantern, plants, books, shelves, armchairs, rug and floor. Do not redraw or rearrange any props. No new animal, object or shadow. This is only removal of that one little cat so an animated cat can later be overlaid on the same cushion.",
+  "catPrompt": "A production sprite sheet of one small cute sleepy GINGER TABBY CAT for a cosy pixel-art game, on a fully transparent empty background. Exactly EIGHT frames in a strict grid of FOUR equal-width columns by TWO equal-height rows. Landscape 2:1 canvas. No labels or grid lines. The SAME little orange domestic cat in every cell: warm burnt-orange fur, subtle dark brown tabby stripes, cream muzzle and paws, tiny dark nose, pointed ears, fluffy rounded curled tail, dark fine pixel outline. Rich crisp square pixel clusters, warm amber lighting, matching a cosy woodland storybook pixel-art room. Full body visible in every frame. Same scale and camera throughout, centered in each square cell, ground/paws baseline at 86 percent of each cell height, lots of fully empty transparent margin. The cat must never touch a cell edge. No collars, clothing, props, furniture, cushion, scenery, text or shadows.\nFrame order LEFT TO RIGHT, first TOP row then BOTTOM row:\n1. Sleeping curled in a horizontal loaf, head at left, tail wrapping body on right, eyes closed, peaceful.\n2. Waking into a stretch, eyes half open, head lifts slightly and forepaws reach forward to left.\n3. Full gentle cat stretch, front paws extended left, rear raised, curved back and tail softly lifted, content squint.\n4. Sitting compactly, one front paw lifted near face in preparation for grooming.\n5. Same compact sitting pose, eyes softly closed, pink tongue touching raised paw, licking it.\n6. Beginning to turn toward the window behind it, three-quarter rear view, head looking up-left, tail curled low.\n7. Settled sitting with back to viewer, head gently looking out toward upper-left, small ears attentive, tail curls around paws.\n8. Curling back down into its original sleeping position, head lowers left and eyes close, tail wraps right.\nAll eight frames belong to a single small orange tabby with consistent proportions. Actual truly transparent background.",
+  "frameOrder": [
+    "sleeping",
+    "waking_stretch",
+    "full_stretch",
+    "paw_up",
+    "lick_paw",
+    "turning_to_window",
+    "watching_window",
+    "curling_to_sleep"
+  ],
+  "requestedGrid": {
+    "columns": 4,
+    "rows": 2
+  },
+  "originalCatApproxBounds": {
+    "x": 398,
+    "y": 207,
+    "width": 91,
+    "height": 44
+  },
+  "cushionContactAnchorSource": {
+    "x": 441,
+    "y": 247
+  },
+  "suggestedStage1440x900Anchor": {
+    "x": 413.4375,
+    "y": 201.5625
+  },
+  "stageMapping": "room-v2 source1536x1024, CSS cover stage1440x900 => scale0.9375 and vertical offset-30",
+  "generatedBy": "OpenAI built-in image_gen; original full resolution files copied unchanged",
+  "outputRoom": "outputs/HearthsidePoker/game/assets/cat-free-room.png",
+  "outputSheet": "outputs/HearthsidePoker/game/assets/cat-states.png",
+  "generatedSources": {
+    "room": "C:/Users/benff/.codex/generated_images/01a0960b-31d1-7d02-a8b5-62ea80eecf2a/exec-d385f89c-e582-4bbb-843d-b9e3805b5f0e.png",
+    "sheet": "C:/Users/benff/.codex/generated_images/01a0960b-31d1-7d02-a8b5-62ea80eecf2a/exec-b8f8fcbb-f4a2-47a5-aab1-4ec7ec12a3ad.png"
+  },
+  "validation": {
+    "room": {
+      "width": 1536,
+      "height": 1024,
+      "channels": 3
+    },
+    "sheet": {
+      "width": 1774,
+      "height": 887,
+      "channels": 4,
+      "hasAlpha": true,
+      "fullyTransparentPixelCount": 1057135,
+      "partialAlphaPixelCount": 516082,
+      "opaqueFrameEdgePixelCount": 0
+    },
+    "opaqueFrameBounds": [
+      [
+        58,
+        186,
+        389,
+        377
+      ],
+      [
+        30,
+        145,
+        408,
+        374
+      ],
+      [
+        22,
+        23,
+        425,
+        384
+      ],
+      [
+        94,
+        92,
+        388,
+        384
+      ],
+      [
+        97,
+        61,
+        392,
+        368
+      ],
+      [
+        105,
+        31,
+        350,
+        378
+      ],
+      [
+        88,
+        39,
+        312,
+        378
+      ],
+      [
+        63,
+        171,
+        392,
+        366
+      ]
+    ]
+  },
+  "integration": {
+    "columns": 4,
+    "rows": 2,
+    "nominalCellSize": 443.5,
+    "backgroundSize": "400% 200%",
+    "columnPositions": [
+      "0%",
+      "33.333333%",
+      "66.666667%",
+      "100%"
+    ],
+    "rowPositions": [
+      "0%",
+      "100%"
+    ],
+    "suggestedCssBox": {
+      "left": 356,
+      "top": 105,
+      "width": 114,
+      "height": 114
+    },
+    "sleepingOpaqueBoundsInStage": {
+      "left": 370.9,
+      "top": 152.8,
+      "right": 456,
+      "bottom": 201.9
+    },
+    "note": "114px cell gives original-scale sleeping width85px. Pose top/bottom vary naturally; frame bottoms range199.1..203.7 with top105. Fourcols/tworows CSS percentages handle fractional443.5px cells; fully empty edge margins prevent bleed."
+  }
+}
