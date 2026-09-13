@@ -58,6 +58,10 @@
     var room = stage.querySelector('.room');
     stage.insertBefore(this.canvas, room ? room.nextSibling : stage.firstChild);
     this.context = this.canvas.getContext('2d', { alpha: true });
+    // The painted room's own lights, plus anything the club fund has added.
+    this._extra = [];
+    this._boosts = {};
+    this._lights = LIGHTS.slice();
     this._disposed = false;
     this._paused = false;
     this._gentle = stage.classList.contains('gentle');
@@ -128,8 +132,8 @@
     if (!this.context) return;
     // Source-resolution stamps are tiny, shared by equal radii, and reused at
     // every stage size. Alpha modulation preserves the original slow flicker.
-    for (var i = 0; i < LIGHTS.length; i++) {
-      var radius = LIGHTS[i].radius;
+    for (var i = 0; i < this._lights.length; i++) {
+      var radius = this._lights[i].radius;
       if (this._glowStamps[radius]) continue;
       var stamp = document.createElement('canvas');
       stamp.width = stamp.height = radius * 2;
@@ -149,8 +153,8 @@
   HearthAmbience.prototype._buildDirtyRects = function () {
     var sx = this.canvas.width / this._width, sy = this.canvas.height / this._height;
     var sourceRects = GLASS.map(copyRect);
-    for (var i = 0; i < LIGHTS.length; i++) {
-      var light = LIGHTS[i];
+    for (var i = 0; i < this._lights.length; i++) {
+      var light = this._lights[i];
       sourceRects.push({ x: light.x - light.radius, y: light.y - light.radius,
         w: light.radius * 2, h: light.radius * 2 });
     }
@@ -221,7 +225,7 @@
       this._drawRain(ctx, time);
       this._drawFire(ctx, time);
     }
-    this._lastDrawCalls = this._dirtyRects.length + LIGHTS.length + (still ? 0 : 44 + this._rainPainted * 2);
+    this._lastDrawCalls = this._dirtyRects.length + this._lights.length + (still ? 0 : 44 + this._rainPainted * 2);
     this._lastPaintCpuMs = begin ? Math.max(0, global.performance.now() - begin) : 0;
     this._paintCpuMs += this._lastPaintCpuMs;
     this._frames++;
@@ -259,8 +263,8 @@
   };
 
   HearthAmbience.prototype._drawLights = function (ctx, time, still) {
-    for (var i = 0; i < LIGHTS.length; i++) {
-      var light = LIGHTS[i];
+    for (var i = 0; i < this._lights.length; i++) {
+      var light = this._lights[i];
       // Independent, slow frequencies avoid synchronised pulsing or flashing.
       var breath = still ? 1 : 1 + .10 * Math.sin(time * 1.1 + light.phase) + .055 * Math.sin(time * 2.23 + light.phase * 2);
       var strength = light.strength * breath;
@@ -313,6 +317,27 @@
     ctx.restore();
   };
 
+  // Comforts bought with the club fund: {extra:[light],boosts:{id:{strength,radius}}}.
+  // Rebuilds the cached stamps and dirty rectangles, so a new lamp costs the
+  // same per-frame work as a painted one rather than a separate pass.
+  HearthAmbience.prototype.setComforts = function (comforts) {
+    if (this._disposed) return;
+    comforts = comforts || {};
+    this._extra = Array.isArray(comforts.extra) ? comforts.extra.map(function (light) { return Object.assign({}, light); }) : [];
+    this._boosts = comforts.boosts && typeof comforts.boosts === 'object' ? comforts.boosts : {};
+    var boosts = this._boosts;
+    this._lights = LIGHTS.concat(this._extra).map(function (light) {
+      var scale = boosts[light.id];
+      if (!scale) return light;
+      var lit = Object.assign({}, light);
+      lit.strength = light.strength * (Number(scale.strength) || 1);
+      lit.radius = Math.round(light.radius * (Number(scale.radius) || 1));
+      return lit;
+    });
+    this._buildGlowStamps();
+    this._buildDirtyRects();
+    this._draw(this._gentle ? 0 : this._time, this._gentle);
+  };
   HearthAmbience.prototype.setPaused = function (paused) {
     this._paused = !!paused;
     this._sync();
@@ -349,7 +374,7 @@
       sourceSize: { width: SOURCE_WIDTH, height: SOURCE_HEIGHT },
       cover: { scale: this._scale, x: this._offsetX, y: this._offsetY },
       glass: GLASS.map(copyRect),
-      lights: LIGHTS.map(function (light) { return { id: light.id, x: light.x, y: light.y, radius: light.radius }; })
+      lights: this._lights.map(function (light) { return { id: light.id, x: light.x, y: light.y, radius: light.radius }; })
     };
   };
   HearthAmbience.prototype.destroy = function () {

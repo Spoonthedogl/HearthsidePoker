@@ -34,6 +34,9 @@
     options = options || {};
     this._random = typeof options.random === 'function' ? options.random : Math.random;
     this._onFrame = typeof options.onFrame === 'function' ? options.onFrame : function () {};
+    // A better cushion makes her stir a little more often. Defaults to 1, so
+    // the quiet scheduler is unchanged unless the club has bought one.
+    this._liveliness = Number(options.liveliness) > 0 ? Number(options.liveliness) : 1;
     this._action = 'sleep';
     this._frame = 0;
     this._step = 0;
@@ -53,6 +56,9 @@
   };
   HearthCatDirector.prototype.getState = function () {
     return {action: this._action, frame: this._frame, nextCheckMs: this._nextCheck};
+  };
+  HearthCatDirector.prototype.setLiveliness = function (value) {
+    this._liveliness = Number(value) > 0 ? Number(value) : 1;
   };
   HearthCatDirector.prototype._notify = function () {
     this._onFrame(this._frame, this.getState());
@@ -112,7 +118,7 @@
 
     this._nextCheck = Math.max(0, this._nextCheck - elapsed);
     if (this._nextCheck === 0) {
-      if (this._draw() < 0.22) {
+      if (this._draw() < Math.min(0.6, 0.22 * this._liveliness)) {
         var candidates = [];
         for (var i = 0; i < ACTIONS.length; i++) {
           if (ACTIONS[i] !== this._lastAction) candidates.push(ACTIONS[i]);

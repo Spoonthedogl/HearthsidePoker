@@ -27,6 +27,22 @@ select:focus-visible{outline:3px solid #a77534;outline-offset:3px}
 .recap-hand-row.winner .recap-hand-name{font-weight:bold;color:#5c4a22}
 .recap-hand-row.winner .recap-hand-label{color:#8a6a24;font-weight:bold}
 .recap-pot-row strong{font:14px Georgia;font-weight:normal;color:#47503a;flex:0 0 auto}
+#eveningClose{width:520px}
+.evening-figures{display:flex;gap:14px;margin:18px 0}
+.evening-figures>div{flex:1;background:#e1d2af66;border:1px solid #c5b28c;border-radius:5px;padding:12px 14px}
+.evening-figures .evening-total{background:#d9c07f5c;border-color:#b39a62}
+.evening-figures strong{display:block;font:22px 'Courier New';color:#4a4130;margin-top:6px}
+.evening-figures .chip-symbol{font-size:18px;color:#a8853f}
+#shelf{width:560px;max-height:820px;overflow-y:auto}
+.shelf-total{display:flex;align-items:center;gap:10px;margin:16px 0 6px}
+.shelf-total strong{font:20px 'Courier New';color:#4a4130}
+.shelf-item{display:flex;align-items:center;gap:14px;padding:11px 12px;border-bottom:1px solid #c5b38975}
+.shelf-item>div{flex:1}
+.shelf-item strong{display:block;font:15px Georgia;font-weight:normal;color:#47503a}
+.shelf-item small{display:block;font:11px/1.45 Georgia;color:#7d6c50;margin-top:3px}
+.shelf-item button{border:1px solid #ad9265;border-radius:3px;padding:9px 13px;font:12px 'Courier New';color:#5f5038;white-space:nowrap;min-width:96px}
+.shelf-item.owned{opacity:.72}
+.shelf-item.owned button{border-style:dashed;background:#d7c7a355}
 
 /* Focused table layout: symmetric companions and separate information lanes. */
 #stage{-webkit-user-select:none;user-select:none}input,textarea{user-select:text;-webkit-user-select:text}
