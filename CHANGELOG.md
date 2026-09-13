@@ -21,6 +21,11 @@
 ### Fixed
 
 - On a phone, "Hand details" under your current hand was far too small to read.
+- On a phone with a full table, a companion's nameplate could cover their own
+  cards or a neighbour's, most often while a status like "Big blind 20" wrapped
+  onto a second line, and on smaller tables the top nameplate tucked under the
+  title. Seats now leave room for both, the table message sits just under the
+  board, and the teacup has moved beside your cards.
 
 ---
 

@@ -21,17 +21,25 @@
  /* Portrait phones. Everything for a seat stacks against its own body rather
     than sitting on a shared ring, which keeps the middle of the felt clear for
     the board once a 2x-sized nameplate is in play. */
+ // The tallest nameplate a phone draws is 78px: two lines, with larger text.
+ // Plates hang from their top edge and grow downward, so the room a wrapped
+ // status needs is below the plate, not above it.
+ var PLATE=84,GAP=8;
  function compact(count){
   return Array.from({length:count},function(_,id){
    var angle=Math.PI/2+id*2*Math.PI/count,c=Math.cos(angle),s=Math.sin(angle);
-   var x=384+252*c,y=510+240*s,near=s>.15;
+   var x=384+288*c,y=505+215*s,near=s>.15;
    var body={x:x-84,y:y-104,width:168,height:168};
-   // Kept off both edges so the blind markers hanging to the left of a
-   // nameplate are never clipped by the stage.
-   var label={x:Math.max(40,Math.min(528,x-100)),y:near?body.y+176:body.y-66,width:200,height:60};
-   var cards={x:x-42,y:near?label.y+62:body.y+176,width:84,height:50};
-   return {id:id,body:body,near:near,mirror:c>.1,label:label,cards:cards,
-    chips:{x:x-31,y:cards.y+52,width:62,height:26},pan:c*.65};
+   // A status like "Big blind 20" wraps onto a second line. The flatter ring
+   // keeps a side seat's grown plate clear of the top seat's cards, and top
+   // plates stay low enough to clear the header. Kept off both edges so blind
+   // markers are never clipped.
+   var label={x:Math.max(40,Math.min(528,x-100)),y:near?body.y+176:body.y-70,width:200,height:PLATE};
+   // Top seats' cards sit a little into the table so their chips stay off the pot.
+   var cards={x:x-42,y:near?label.y+PLATE+GAP:body.y+164,width:84,height:50};
+   // Near seats put their chips beside their cards, leaving room above your hand.
+   var chips=near?{x:c<0?cards.x+88:cards.x-66,y:cards.y+12,width:62,height:26}:{x:x-31,y:cards.y+52,width:62,height:26};
+   return {id:id,body:body,near:near,mirror:c>.1,label:label,cards:cards,chips:chips,pan:c*.65};
   });
  }
  function layout(count,variant){
