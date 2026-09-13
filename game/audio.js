@@ -68,13 +68,18 @@
     this._preparing = true;
     try {
       var Context = global.AudioContext || global.webkitAudioContext;
+      // iOS sends Web Audio through the ringer switch unless the page says it
+      // is playback, so a phone on silent heard nothing at all.
+      try { if (global.navigator && global.navigator.audioSession) global.navigator.audioSession.type = 'playback'; } catch (error) { /* Read-only here. */ }
       this._context = new Context();
-      // Suspend immediately, even where embedded Chromium allows autoplay.
-      // The graph has no sources yet, so a pending suspension stays inaudible.
-      var suspended = this._context.suspend ? this._context.suspend() : null;
+      // Silence a device the platform has already started, as embedded Chromium
+      // does. Phones create it suspended, and a redundant suspend() there can
+      // land after the first tap's resume() and switch the sound straight off.
+      var suspended = this._context.state === 'running' && this._context.suspend ? this._context.suspend() : null;
       this._buildGraph();
       this._makeNoise();
       this._makeRoom();
+      this._listenForGestures();
       if (global.document && global.document.addEventListener) {
         this._visibility = function () { self._setHidden(!!global.document.hidden); };
         global.document.addEventListener('visibilitychange', this._visibility);
@@ -104,6 +109,36 @@
     return this._preparePromise;
   };
 
+  // A phone only lets sound start inside a touch, and iOS takes the device away
+  // again after a call or a trip to the home screen. Every touch on the page
+  // gets to unlock it, so no particular button has to remember to ask.
+  var GESTURES = ['touchend', 'pointerup', 'click', 'keydown'];
+  HearthAudio.prototype._listenForGestures = function () {
+    var doc = global.document, self = this;
+    if (!doc || !doc.addEventListener || this._gesture) return;
+    this._gesture = function () { self._unlock(); };
+    GESTURES.forEach(function (type) { doc.addEventListener(type, self._gesture, { capture: true, passive: true }); });
+  };
+
+  HearthAudio.prototype._unlock = function () {
+    var c = this._context;
+    if (this._disposed || this._hidden || !c || c.state === 'closed') return;
+    if (c.state !== 'running') {
+      try {
+        // Older iOS wakes only for a source started while the finger is down.
+        var tick = c.createBufferSource();
+        tick.buffer = c.createBuffer(1, 1, c.sampleRate);
+        tick.connect(c.destination);
+        tick.start(0);
+        var resumed = c.resume();
+        if (resumed && resumed.then) resumed.then(null, function () {});
+      } catch (error) { /* The next touch tries again. */ }
+    }
+    // Music and rain still wait for the player to engage; this only brings
+    // back a table that was already playing.
+    if (this._activated) this.init();
+  };
+
   HearthAudio.prototype._activate = function () {
     if (this._disposed || this._hidden || !this._prepared || !this._context || this._context.state !== 'running') return false;
     if (!this._activated) {
@@ -130,13 +165,23 @@
     var prepared = this.prepare();
     if (!this._context || this._hidden) return Promise.resolve(false);
     if (this._activated && this._context.state === 'running') return Promise.resolve(true);
-    if (this._activationPromise) return this._activationPromise;
     var resumed;
     try {
       // Always request resume inside this gesture, even if a warmup suspend is
       // pending and the context still reports running. Never await it first.
       resumed = this._context.resume();
     } catch (error) { return Promise.resolve(false); }
+    if (this._activationPromise) {
+      // play() asks on every sound, so an activation is often already waiting on
+      // a resume requested outside any touch - which a phone may leave pending
+      // for good. Returning that alone meant a tap never reached resume() and
+      // the table stayed silent. Let whichever resume lands start the table.
+      var waiting = this;
+      Promise.resolve(resumed).then(function () {
+        if (waiting._context && waiting._context.state === 'running') waiting._activate();
+      }, function () {});
+      return this._activationPromise;
+    }
     this._activationPromise = Promise.all([prepared, Promise.resolve(resumed)]).then(function (results) {
       if (!results[0] || self._disposed || self._hidden || !self._context) return false;
       // A platform may acknowledge resume before its earlier suspend settles.
@@ -601,6 +646,11 @@
     this._pendingEffects = [];
     if (this._timer != null) global.clearInterval(this._timer);
     if (this._visibility && global.document) global.document.removeEventListener('visibilitychange', this._visibility);
+    if (this._gesture && global.document) {
+      var gesture = this._gesture;
+      GESTURES.forEach(function (type) { global.document.removeEventListener(type, gesture, { capture: true }); });
+      this._gesture = null;
+    }
     this._sources.slice().forEach(function (source) { try { source.stop(); } catch (error) { /* Already stopped. */ } });
     this._loops.forEach(function (loop) {
       try { loop.source.stop(); } catch (error) { /* Already stopped. */ }
