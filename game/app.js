@@ -29,6 +29,10 @@
  var examples=[['As','Jh','9c','6d','3s'],['Kh','Ks','9c','6d','3s'],['Kh','Ks','9c','9d','3s'],['7h','7s','7c','Kd','3s'],['9h','8s','7c','6d','5s'],['Ah','Jh','8h','6h','3h'],['Qh','Qs','Qc','8d','8s'],['5h','5s','5c','5d','As'],['9h','8h','7h','6h','5h']];
  // A phone-sized screen swaps the whole stage to the portrait design space
  // rather than shrinking the desk layout, which would leave 4px text.
+ // Own the viewport rather than trusting the page we are embedded in: without
+ // a locked device-width the layout viewport falls back to ~980px and every
+ // measurement below is taken against a screen that isn't there.
+ (function(){var m=document.querySelector('meta[name=viewport]');if(!m){m=document.createElement('meta');m.name='viewport';document.head.appendChild(m);}m.setAttribute('content','width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover');})();
  var compact=null,seatsMounted=false,rotateDismissed=false,fitMotes=function(){};
  function seatVariant(){return compact?'compact':'wide';}
  function touchDevice(){return matchMedia('(pointer:coarse)').matches;}
@@ -41,7 +45,9 @@
   resize();
  }
  $('rotateHint').addEventListener('click',function(){rotateDismissed=true;this.classList.add('hidden');});
- addEventListener('resize',applyMode);addEventListener('orientationchange',applyMode);applyMode();
+ // Re-check after layout settles: setting the viewport meta above can change
+ // the layout viewport without firing a resize.
+ addEventListener('resize',applyMode);addEventListener('orientationchange',applyMode);addEventListener('load',applyMode);applyMode();requestAnimationFrame(applyMode);
  function safeStore(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}}
  try{restore=JSON.parse(localStorage.getItem('hearthside-session')||'null');if(restore&&restore.version===2){try{HearthSession.unpack(restore);}catch(err){restore=null;console.warn('Saved hand unavailable: '+err.message);}}var prefs=JSON.parse(localStorage.getItem('hearthside-settings')||'null');if(prefs){pace=["relaxed","normal","brisk"].includes(prefs.pace)?prefs.pace:"normal";audio.setMaster(prefs.master);audio.setMusic(prefs.music);audio.setAmbience(prefs.ambience);audio.setMuted(prefs.muted);$('reducedMotion').checked=!!prefs.gentle;$('stage').classList.toggle('gentle',!!prefs.gentle);}}catch(e){}
  function saveSettings(){var p=audio.getSettings();p.gentle=$('reducedMotion').checked;p.pace=pace;safeStore('hearthside-settings',p);}
