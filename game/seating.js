@@ -1,7 +1,13 @@
 /* Clockwise physical seats, with the human fixed at the near edge. */
 (function(root,factory){if(typeof module==='object'&&module.exports)module.exports=factory();else root.HearthSeating=factory();})(typeof globalThis!=='undefined'?globalThis:this,function(){
  'use strict';
- var STAGE={wide:{width:1440,height:900},compact:{width:768,height:1408}};
+ // Points the chip and celebration particles fly between. They belong beside
+ // the seat geometry because they are in the same design space, and a portrait
+ // stage puts the pot and the player's own chips somewhere quite different.
+ var STAGE={
+  wide:{width:1440,height:900,pot:[755,483],hero:[720,780],heroWin:[720,714],rivalWinY:425},
+  compact:{width:768,height:1408,pot:[430,466],hero:[384,910],heroWin:[384,890],rivalWinY:430}
+ };
  function wide(count){
   return Array.from({length:count},function(_,id){
    var angle=Math.PI/2+id*2*Math.PI/count,c=Math.cos(angle),s=Math.sin(angle);

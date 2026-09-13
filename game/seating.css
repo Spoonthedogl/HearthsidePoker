@@ -20,8 +20,6 @@
 #stage .seated-companion .npc-chips{left:var(--chips-x);top:var(--chips-y);transform:scale(.8);transform-origin:0 0}
 #stage .seated-companion .speech{left:var(--label-x);top:auto;bottom:calc(300px - var(--label-y) + 6px);width:164px;white-space:normal;font-size:12px;padding:5px;background:#211b17e8;border-radius:4px;pointer-events:none}
 #stage .seated-companion .speech:after{display:none}
-/* The nameplate already announces each bet; avoid a second text layer over cards. */
-#stage .seated-companion .bet-feedback{display:none}
 #stage .table-outer{left:300px;top:340px;width:840px;height:450px;border-radius:50%;clip-path:none;overflow:hidden}
 #stage .table-wood,#stage .table-felt,#stage .felt-stitch{border-radius:50%}
 #stage .table-shadow{left:302px;top:368px;width:836px;height:426px;border-radius:50%}
@@ -38,7 +36,7 @@
 #stage .wallet strong{font-size:25px}
 #stage .hand-peek,#stage.seated .hand-peek{left:895px;top:784px;max-width:230px;padding:8px 12px}
 #stage .hand-peek strong{font-size:18px}
-#stage .hand-peek #handSource{font-size:10px}
+#stage .hand-peek #handSource{font-size:12px}
 #stage .action-bar{bottom:38px}
 #stage .session-info{top:107px}
 /* Only the results list scrolls; the next-hand action stays beside its heading. */

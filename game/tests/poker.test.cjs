@@ -303,3 +303,16 @@ test('real AI steps remain legal through 30 seeded games', () => {
     assert.equal(chips(t),2000);
   }
 });
+
+test('the event log covers one hand, and the table is the one that clears it',()=>{
+ const t=new Poker.Table({names:['You','Juniper','Luna']});
+ t.newHand();while(!t.result)t.act(t.actor,t.legalActions().check?'check':'call');
+ const first=t.events.length;assert(first>3);
+ assert(t.events.every(e=>e.handNumber===1));
+ t.newHand();
+ assert(t.events.every(e=>e.handNumber===2),'the previous hand is not still in the log');
+ assert(t.events.length<first,'and it started over rather than appending');
+ assert(t.events[0].type==='hand-start');
+ // Ids keep climbing so a UI cursor can still tell old events from new ones.
+ assert(t.eventId>first);
+});

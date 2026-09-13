@@ -322,6 +322,9 @@
       this.currentBet = 0; this.minRaise = this.bigBlind; this.handNumber = 0;
       this.events = []; this.eventId = 0; this.result = null; this.gameOver = false;
       this.pending = new Set(); this.deck = [];
+      // Chips bought in after the deal. Play only ever moves chips between
+      // stacks, so this is the one number that explains a changed table total.
+      this.injected = 0;
     }
     get pot() { return this.players.reduce((sum, p) => sum + p.totalBet, 0); }
     _event(type, data = {}) { const event = {id: ++this.eventId, type, handNumber: this.handNumber, street: this.street, ...data}; this.events.push(event); return event; }
@@ -335,6 +338,10 @@
       if (!['idle', 'showdown'].includes(this.street)) throw new Error('Finish the current hand first.');
       const funded = this.players.filter(p => p.stack > 0);
       if (funded.length < 2) { this.gameOver = true; this.actor = null; return false; }
+      // The log covers one hand. chooseAIAction() reads it back to count the
+      // raises on this street, so clearing it belongs to the engine that
+      // writes it, not to whoever happens to be driving the table.
+      this.events = [];
       this.gameOver = false; this.handNumber++; this.result = null; this.board = [];
       this.street = 'preflop'; this.currentBet = this.bigBlind; this.minRaise = this.bigBlind;
       this.dealer = this._next(this.dealer, p => p.stack > 0);
@@ -498,6 +505,16 @@
         style:p.name, street: this.street, stack: p.stack, bet: p.bet, streetRaiseCount, ownRaiseCount}, this.random);
     }
     stepAI() { const id = this.actor, decision = this.chooseAIAction(); this.act(id, decision.type, decision.amount); return {playerId: id, ...decision}; }
+    // Buying back in is the only way chips enter a table. Counting it here
+    // keeps the total explainable, so a save can still be checked for damage.
+    rebuy(id) {
+      const p = this.players[id];
+      if (!p) throw new Error('No such seat.');
+      if (p.stack > 0) throw new Error('That seat still has chips.');
+      if (!this.result && this.street !== 'idle') throw new Error('Finish the hand before buying in.');
+      p.stack = this.startingStack; this.injected += this.startingStack;
+      return this.startingStack;
+    }
     snapshot(options = {}) {
       const revealed = new Set(this.result ? this.result.showdown.map(p => p.id) : []);
       return {players: this.players.map(p => ({id: p.id, name: p.name, stack: p.stack, hole: p.id === 0 || options.revealAll || revealed.has(p.id) ? p.hole.map(c => ({...c})) : p.hole.map(() => null), folded: p.folded, allIn: p.allIn, bet: p.bet, totalBet: p.totalBet, lastAction: p.lastAction})),

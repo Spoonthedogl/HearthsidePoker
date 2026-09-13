@@ -15,3 +15,6 @@ Saved/
 # OS cruft
 Thumbs.db
 .DS_Store
+
+# Cook/package bookkeeping, regenerated on every build.
+Build/**/FileOpenOrder/*.log
