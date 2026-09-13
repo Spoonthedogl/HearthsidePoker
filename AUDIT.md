@@ -330,7 +330,7 @@ I would write. Effort **M**. **Risk: low** if extraction is mechanical.
 [/Script/AndroidFileServerEditor.AndroidFileServerRuntimeSettings]
 bEnablePlugin=True
 bAllowNetworkConnection=True
-SecurityToken=5D6B21D84461BE1AE350DC87750D422E
+SecurityToken=<32-hex value, redacted>
 ```
 
 This is Unreal's Android File Server — an editor plugin for pushing files to a
