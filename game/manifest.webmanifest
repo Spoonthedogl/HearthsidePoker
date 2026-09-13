@@ -1,0 +1,17 @@
+{
+  "name": "Hearthside · Woodland Poker Club",
+  "short_name": "Hearthside",
+  "description": "A cosy evening of woodland poker by the fire. All make-believe chips.",
+  "start_url": ".",
+  "scope": ".",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#140e0d",
+  "theme_color": "#140e0d",
+  "categories": ["games"],
+  "icons": [
+    { "src": "assets/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "assets/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "assets/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
