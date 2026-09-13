@@ -31,8 +31,11 @@
  * automatically. UI can animate newly appended .events in order. Each event
  * has monotonically increasing id/type/handNumber/street. Result has
  * {reason,totalPot,winners:[{id,amount,wonAmount,returnedAmount,hand}],pots,
- * showdown,board}. amount includes any uncalled return; wonAmount excludes
- * that return. hand is null for wins by folding, which reveal no hole cards.
+ * bonus,showdown,board}. amount includes any uncalled return; wonAmount
+ * excludes that return. hand is null for wins by folding, which reveal no
+ * hole cards. bonus:[{playerId,amount}] lists any showdown Jack-Two table
+ * tribute; it is a transfer between stacks, never new chips, and never
+ * fires on a fold win since those keep hole cards private.
  * Settlement clears live contributions (.pot becomes 0); result.totalPot
  * preserves the just-finished pot. Stacks + live pot are always conserved.
  * No real money, network, external assets, or dependencies.
@@ -260,18 +263,22 @@
     if (legal.canRaise && ownRaises === 0 && raises < (early ? 1 : 2)) {
       let desired = 0, budget = 0, probability = 0;
       if (street === 'preflop') {
-        const threshold = rivals === 1 ? 0.58 : rivals === 2 ? 0.43 : 0.34;
-        probability = value > threshold + 0.14 ? 0.70 : value > threshold ? 0.34 : 0;
+        const threshold = rivals === 1 ? 0.55 : rivals === 2 ? 0.41 : 0.32;
+        probability = value > threshold + 0.12 ? 0.74 : value > threshold ? 0.40 : 0;
         desired = roundChips(bigBlind * (view.pot > bigBlind * 3 ? 3 : 2.5));
         budget = Math.min(bigBlind * 4, ownBet + Math.floor(stack * 0.15));
       } else if (street === 'flop') {
-        const threshold = 1 / (rivals + 1) + 0.12;
-        probability = value > Math.max(0.65, threshold) ? 0.70 : value > threshold ? 0.38 : 0;
-        desired = Math.max(bigBlind, roundChips(view.pot * (value > 0.70 ? 0.35 : 0.28)));
+        const threshold = 1 / (rivals + 1) + 0.10;
+        probability = value > Math.max(0.62, threshold) ? 0.74 : value > threshold ? 0.42 : 0;
+        // Continuous pot-fraction sizing: bigger hands lean into bigger bets,
+        // instead of a flat two-tier switch. Still bounded by the same budget
+        // below, so this cannot turn a bet into a proactive early jam.
+        const sizeFrac = 0.24 + Math.max(0, Math.min(1, (value - 0.5) / 0.5)) * 0.20;
+        desired = Math.max(bigBlind, roundChips(view.pot * sizeFrac));
         budget = ownBet + Math.floor(stack * 0.18);
       } else {
-        if (raises === 0) probability = value > 0.72 ? 0.78 : value > 0.48 ? 0.42 : 0;
-        else probability = value > (street === 'river' ? 0.84 : 0.88) ? 0.42 : 0;
+        if (raises === 0) probability = value > 0.70 ? 0.80 : value > 0.46 ? 0.45 : 0;
+        else probability = value > (street === 'river' ? 0.82 : 0.87) ? 0.45 : 0;
         desired = view.currentBet + Math.max(view.minRaise, roundChips(view.pot * (street === 'river' ? 0.50 : 0.38)));
         budget = ownBet + Math.floor(stack * (street === 'river' ? 0.55 : 0.38));
       }
@@ -450,8 +457,26 @@
         pots.push({amount, eligible: eligible.map(p => p.id), winners: winners.map(p => p.id), uncalled: contributors.length === 1});
       }
       for (const [id, amount] of winnings) this.players[id].stack += amount;
+      // Table folklore: a shown-down Jack-Two wins a friendly tribute from
+      // everyone dealt in. Purely a transfer between stacks - no chips are
+      // created, only ever moved, and never for wins that keep cards hidden.
+      const bonusAwards = [];
+      if (reason === 'showdown') {
+        const isJackTwo = p => p.hole.length === 2 && p.hole.map(c => c.rank).sort((a, b) => a - b).join(',') === '2,11';
+        for (const winnerId of winnings.keys()) {
+          const winner = this.players[winnerId];
+          if (!isJackTwo(winner)) continue;
+          let bonus = 0;
+          for (const p of this.players) {
+            if (p.id === winnerId || !p.hole.length || p.stack <= 0) continue;
+            const paid = Math.min(this.bigBlind, p.stack);
+            p.stack -= paid; bonus += paid;
+          }
+          if (bonus > 0) { winner.stack += bonus; bonusAwards.push({playerId: winnerId, amount: bonus}); }
+        }
+      }
       this.street = 'showdown'; this.actor = null; this.pending.clear();
-      this.result = {reason, totalPot, winners: [...winnings].map(([id, amount]) => ({id, amount, wonAmount: amount - (returns.get(id) || 0), returnedAmount: returns.get(id) || 0, hand: reason === 'showdown' ? hands.get(id) : null})), pots,
+      this.result = {reason, totalPot, winners: [...winnings].map(([id, amount]) => ({id, amount, wonAmount: amount - (returns.get(id) || 0), returnedAmount: returns.get(id) || 0, hand: reason === 'showdown' ? hands.get(id) : null})), pots, bonus: bonusAwards,
         showdown: reason === 'showdown' ? live.map(p => ({id: p.id, hole: p.hole.map(c => ({...c})), hand: hands.get(p.id)})) : [], board: this.board.map(c => ({...c}))};
       for (const p of this.players) { p.bet = 0; p.totalBet = 0; }
       this.gameOver = this.players.filter(p => p.stack > 0).length < 2;
