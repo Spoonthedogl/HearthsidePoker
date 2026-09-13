@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Hearthside Poker</string>
+    <string name="title_activity_main">Hearthside Poker</string>
+    <string name="package_name">com.hearthside.poker</string>
+    <string name="custom_url_scheme">com.hearthside.poker</string>
+</resources>

@@ -1,0 +1,25 @@
+# Dependencies and generated web bundle
+node_modules/
+dist/
+
+# Signing material — must never be committed
+*.keystore
+*.jks
+keystore.properties
+release-signing.properties
+
+# Android build outputs and local machine config
+android/.gradle/
+android/build/
+android/app/build/
+android/captures/
+android/local.properties
+android/app/release/
+android/app/debug/
+*.apk
+*.aab
+.DS_Store
+
+# Local convenience (machine-specific paths)
+env.sh
+build-apk.sh

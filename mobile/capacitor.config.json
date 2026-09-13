@@ -1,0 +1,12 @@
+{
+  "appId": "com.hearthside.poker",
+  "appName": "Hearthside Poker",
+  "webDir": "dist",
+  "backgroundColor": "#140e0dff",
+  "server": {
+    "androidScheme": "https"
+  },
+  "android": {
+    "backgroundColor": "#140e0dff"
+  }
+}
