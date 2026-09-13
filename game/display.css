@@ -84,3 +84,7 @@ select:focus-visible{outline:3px solid #a77534;outline-offset:3px}
 .club-ledger strong{display:block;font:18px Georgia;color:#4c4030;margin-top:4px}
 .club-ledger .chip-symbol{font-size:15px}
 #eveningClose .evening-best{font:italic 14px/1.6 Georgia;color:#7a5f2c;margin:4px 0}
+/* Four-colour deck: suits told apart by colour as well as shape. Hearts keep
+   their red and spades their ink; diamonds turn blue and clubs green. */
+body.four-colour .card.suit-d,body.four-colour .row-cards i.suit-d,body.four-colour .out-card.suit-d{color:#2c63a6}
+body.four-colour .card.suit-c,body.four-colour .row-cards i.suit-c,body.four-colour .out-card.suit-c{color:#2b7443}
