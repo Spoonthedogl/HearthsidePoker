@@ -338,6 +338,10 @@
       if (!['idle', 'showdown'].includes(this.street)) throw new Error('Finish the current hand first.');
       const funded = this.players.filter(p => p.stack > 0);
       if (funded.length < 2) { this.gameOver = true; this.actor = null; return false; }
+      // The log covers one hand. chooseAIAction() reads it back to count the
+      // raises on this street, so clearing it belongs to the engine that
+      // writes it, not to whoever happens to be driving the table.
+      this.events = [];
       this.gameOver = false; this.handNumber++; this.result = null; this.board = [];
       this.street = 'preflop'; this.currentBet = this.bigBlind; this.minRaise = this.bigBlind;
       this.dealer = this._next(this.dealer, p => p.stack > 0);
