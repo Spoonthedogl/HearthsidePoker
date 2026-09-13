@@ -1,6 +1,6 @@
 # Hearthside · Woodland Poker Club
 
-A playable, single-player, cosy pixel-art Texas Hold’em game for Windows, built as an Unreal Engine 5.8 project. Choose any one to six opponents from Juniper the fox, Luna the moth, Moss the frog, Clipper the crocodile, Mur the axolotl and Baron the dog. All chips are make-believe.
+A playable, single-player, cosy pixel-art Texas Hold’em game. It ships as a Windows app (an Unreal Engine 5.8 project), and the very same game plays in any browser and installs on a phone — a sideloadable Android app, or "Add to Home Screen" on an iPhone or iPad. Choose any one to six opponents from Juniper the fox, Luna the moth, Moss the frog, Clipper the crocodile, Mur the axolotl and Baron the dog. All chips are make-believe.
 
 ## Play
 
@@ -17,6 +17,16 @@ The same `game/` folder is a self-contained web build: serve it over any static 
 On a portrait phone the table re-deals itself down the screen instead of shrinking the desk layout. The stage switches from its 1440 × 900 design space to a portrait 768 × 1408 one, drawn at roughly double size so it lands at readable text and thumb-sized buttons once scaled to the screen: companions ring a taller oval, each one's nameplate and cards stacked against its own body, and the community cards, your hand and the betting buttons run down the middle. Nothing reflows, because the layout is still absolute — it is a second set of coordinates, not a second layout engine.
 
 This turns on below 560px on the short edge, in portrait. Tablets and desktop browsers keep the desk layout untouched. A phone held in landscape is asked to turn upright, and can tap through to the desk layout anyway. Screen mode, window size and frame rate belong to the standalone build, so Settings on a phone is just sound and motion.
+
+## Install it on a phone
+
+There are three ways to play on a phone, all free and needing no account:
+
+- **Just open the link.** The web version plays in any mobile browser. Once opened, it also works offline, and the club fund saves to that browser.
+- **iPhone / iPad — Add to Home Screen.** Open the web link in **Safari**, tap the **Share** button, then **Add to Home Screen**. It installs with the fox icon and opens full-screen, like an app, and runs offline. (Apple does not allow a free, shareable `.ipa`; the home-screen install is the free equivalent and needs no Mac, developer account or App Store.)
+- **Android — install the app.** Download **Hearthside-Poker-1.5.0.apk** from the [Releases page](https://github.com/Spoonthedogl/HearthsidePoker/releases) and open it. Android will ask you to allow installing apps from this source the first time; the app then works entirely offline. It is not on the Play Store, so it installs as a normal sideloaded app.
+
+The web/home-screen versions are published from `game/` to GitHub Pages by `.github/workflows/pages.yml`. The Android app is a thin [Capacitor](https://capacitorjs.com) wrapper around the exact same `game/` files; see **mobile/README.md** to rebuild or update it.
 
 ## Seated cast and table sizes
 
