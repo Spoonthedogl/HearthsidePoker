@@ -219,6 +219,15 @@
     return task.result;
   }
 
+  // How carefully the companions play. Standard is the table exactly as it has
+  // always been; the others turn the same dials rather than adding new logic.
+  // Gentle misjudges more, raises less and calls too wide; Sharp reads its
+  // hand more precisely, presses value and folds what it should.
+  const DIFFICULTY = {
+    gentle:   {trials: 32,  noise: 0.22, raise: 0.7,  callMargin: -0.02, looseCall: 0.1},
+    standard: {trials: 64,  noise: 0.08, raise: 1,    callMargin: 0.025, looseCall: 0.035},
+    sharp:    {trials: 128, noise: 0.01, raise: 1.45, callMargin: 0.075, looseCall: 0.003}
+  };
   // This helper accepts an information-limited view, deliberately never Table.
   function chooseFairAction(view, random = Math.random) {
     const legal = view.legal;
@@ -227,7 +236,8 @@
     const deck = makeDeck().filter(c => !excluded.has(cardKey(c)));
     const rivals = Math.max(1, Math.min(6, view.opponents || 1));
     let equity = 0;
-    const trials = 64;
+    const profile = DIFFICULTY[view.difficulty] || DIFFICULTY.standard;
+    const trials = profile.trials;
     for (let trial = 0; trial < trials; trial++) {
       const pool = [...deck];
       // Partial Fisher-Yates: simulated cards never inspect the real deck.
@@ -245,7 +255,7 @@
       if (!beaten) equity += 1 / ties;
     }
     equity /= trials;
-    const noise = (random() - 0.5) * 0.08;
+    const noise = (random() - 0.5) * profile.noise;
     const price = legal.call / Math.max(1, view.pot + legal.call);
     const styles={Juniper:{bias:.015,raise:1.18,size:1.0},Luna:{bias:-.025,raise:.78,size:.9},Moss:{bias:.025,raise:.65,size:.85},Clipper:{bias:-.045,raise:.9,size:1.12},Mur:{bias:.045,raise:.82,size:.85},Baron:{bias:.03,raise:.72,size:1.0}};
     const style=styles[view.style]||{bias:0,raise:1,size:1};
@@ -282,7 +292,7 @@
         desired = view.currentBet + Math.max(view.minRaise, roundChips(view.pot * (street === 'river' ? 0.50 : 0.38)));
         budget = ownBet + Math.floor(stack * (street === 'river' ? 0.55 : 0.38));
       }
-      if (probability > 0 && random() < probability * style.raise) {
+      if (probability > 0 && random() < probability * style.raise * profile.raise) {
         const made = evaluateUnchecked(known);
         // Later strong value can commit a short stack. Early bets never turn
         // into proactive jams just because a size was clipped to the stack.
@@ -299,10 +309,10 @@
     }
     if (legal.check) return {type: 'check'};
     const expensiveEarlyCall = early && legal.call > bigBlind * 3 && legal.call > stack * 0.25;
-    const threshold = Math.max(price + 0.025, expensiveEarlyCall ? (street === 'preflop' ? 0.53 : 0.62) : 0);
+    const threshold = Math.max(price + profile.callMargin, expensiveEarlyCall ? (street === 'preflop' ? 0.53 : 0.62) : 0);
     // Small calls, including genuine short-stack all-in calls, remain legal
     // and available. Expensive early calls require stronger visible evidence.
-    if (value > threshold || legal.call <= bigBlind && value > 0.12 || !expensiveEarlyCall && random() < 0.035) return {type: 'call'};
+    if (value > threshold || legal.call <= bigBlind && value > 0.12 || !expensiveEarlyCall && random() < profile.looseCall) return {type: 'call'};
     return {type: 'fold'};
   }
 
@@ -325,6 +335,7 @@
       // Chips bought in after the deal. Play only ever moves chips between
       // stacks, so this is the one number that explains a changed table total.
       this.injected = 0;
+      this.difficulty = Object.prototype.hasOwnProperty.call(DIFFICULTY, options.difficulty) ? options.difficulty : 'standard';
     }
     get pot() { return this.players.reduce((sum, p) => sum + p.totalBet, 0); }
     _event(type, data = {}) { const event = {id: ++this.eventId, type, handNumber: this.handNumber, street: this.street, ...data}; this.events.push(event); return event; }
@@ -502,7 +513,7 @@
       }
       return chooseFairAction({hole: p.hole.map(c => ({...c})), board: this.board.map(c => ({...c})), legal: this.legalActions(),
         pot: this.pot, opponents: this._live().length - 1, currentBet: this.currentBet, minRaise: this.minRaise, bigBlind: this.bigBlind,
-        style:p.name, street: this.street, stack: p.stack, bet: p.bet, streetRaiseCount, ownRaiseCount}, this.random);
+        style:p.name, difficulty: this.difficulty, street: this.street, stack: p.stack, bet: p.bet, streetRaiseCount, ownRaiseCount}, this.random);
     }
     stepAI() { const id = this.actor, decision = this.chooseAIAction(); this.act(id, decision.type, decision.amount); return {playerId: id, ...decision}; }
     // Buying back in is the only way chips enter a table. Counting it here
@@ -521,5 +532,5 @@
         board: this.board.map(c => ({...c})), street: this.street, dealer: this.dealer, actor: this.actor, currentBet: this.currentBet, minRaise: this.minRaise, pot: this.pot, handNumber: this.handNumber, result: this.result, gameOver: this.gameOver};
     }
   }
-  return {SUITS, CATEGORY_NAMES, RANK_NAMES, cardKey, makeDeck, shuffledDeck, evaluate, compare, analyzeVisible, createVisibleAnalysis, chooseFairAction, Table};
+  return {SUITS, CATEGORY_NAMES, RANK_NAMES, DIFFICULTIES: Object.keys(DIFFICULTY), cardKey, makeDeck, shuffledDeck, evaluate, compare, analyzeVisible, createVisibleAnalysis, chooseFairAction, Table};
 });
