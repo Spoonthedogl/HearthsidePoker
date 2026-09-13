@@ -213,3 +213,6 @@ body.compact #recapContent h3{font-size:28px}
 .rotate-hint span{display:block;font-size:64px;color:#e0b876;margin-bottom:18px}
 .rotate-hint p{font-size:24px;margin:0 0 10px}
 .rotate-hint small{font-size:15px;color:#a8917a}
+body.compact .log-list{font-size:23px;line-height:1.5}
+body.compact .log-list li{padding:12px 2px}
+body.compact .log-list .log-street{font-size:18px;letter-spacing:2.4px;gap:12px}

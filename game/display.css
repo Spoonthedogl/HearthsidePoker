@@ -71,3 +71,10 @@ select:focus-visible{outline:3px solid #a77534;outline-offset:3px}
 /* Short animal-specific acknowledgements; no changes to card or mood state. */
 .companion:focus-visible{outline:none}.companion:focus-visible .nameplate{outline:2px solid #eedaa5;outline-offset:3px}.companion[data-character="juniper"].hover-react .sprite{animation:foxHello 1.1s ease}.companion[data-character="luma"].hover-react .sprite{animation:lunaHello 1.1s ease}.companion[data-character="moss"].hover-react .sprite{animation:mossHello 1.1s ease}.companion[data-character="clipper"].hover-react .sprite{animation:clipperHello 1.1s ease}.companion[data-character="mur"].hover-react .sprite{animation:murHello 1.1s ease}.companion[data-character="baron"].hover-react .sprite{animation:baronHello 1.1s ease}
 @keyframes foxHello{30%{transform:rotate(-4deg) translateX(-3px)}65%{transform:rotate(2deg)}}@keyframes lunaHello{25%,65%{transform:translateY(-5px) scaleX(1.025)}45%{transform:translateY(-2px) scaleX(.985)}}@keyframes mossHello{35%{transform:translateY(3px) scaleY(.975)}70%{transform:translateY(-2px)}}@keyframes clipperHello{40%{transform:rotate(2deg) translateY(3px)}65%{transform:rotate(-1deg)}}@keyframes murHello{25%{transform:translateY(-8px) scaleX(.98)}50%{transform:translateY(1px) scaleX(1.025)}75%{transform:translateY(-4px)}}@keyframes baronHello{20%,60%{transform:rotate(-3deg)}40%,80%{transform:rotate(3deg)}}.gentle .companion.hover-react .sprite{animation:none!important}
+/* The hand written down as it happens, in the journal beside the odds. */
+.log-list{list-style:none;margin:0;padding:0;font:13px/1.5 Georgia;color:#5b4d38}
+.log-list li{padding:7px 2px;border-bottom:1px solid #c5b38955}
+.log-list li b{font-weight:normal;color:#43543c}
+.log-list .log-street{display:flex;align-items:center;gap:9px;font:10px 'Courier New';letter-spacing:2px;color:#8d7656;margin-top:6px}
+.log-list .log-street .row-cards{margin:0}
+.log-list .log-result{font-style:italic;color:#7a5f2c;border-bottom:0}

@@ -27,6 +27,8 @@
     this._master = options.master == null ? 0.72 : clamp(options.master, 0, 1);
     this._music = options.music == null ? 0.19 : clamp(options.music, 0, 1);
     this._ambience = options.ambience == null ? 0.16 : clamp(options.ambience, 0, 1);
+    // Cards and chips had no channel of their own and rode on master alone.
+    this._effects = options.effects == null ? 0.88 : clamp(options.effects, 0, 1);
     this._muted = !!options.muted;
     this._seed = 918271;
     this._sources = [];
@@ -172,7 +174,7 @@
     this._highpass.type = 'highpass';
     this._highpass.frequency.value = 32;
     this._highpass.Q.value = 0.5;
-    this._fxBus.gain.value = 0.88;
+    this._fxBus.gain.value = this._effects;
     this._musicBus.gain.value = this._music;
     this._ambientBus.gain.value = this._ambience;
     this._masterNode.gain.value = this._muted ? 0 : this._master;
@@ -552,6 +554,13 @@
     this._ramp(this._ambientBus, this._ambience, 0.16);
     return this._ambience;
   };
+  HearthAudio.prototype.setEffects = function (value) {
+    var v = Number(value);
+    if (Number.isFinite(v)) this._effects = clamp(v, 0, 1);
+    this._ramp(this._fxBus, this._effects, 0.08);
+    return this._effects;
+  };
+  HearthAudio.prototype.getEffects = function () { return this._effects; };
   HearthAudio.prototype.setMuted = function (muted) {
     this._muted = !!muted;
     this._ramp(this._masterNode, this._muted || this._hidden ? 0 : this._master, 0.025);
@@ -566,7 +575,7 @@
   HearthAudio.prototype.getAmbience = function () { return this._ambience; };
   HearthAudio.prototype.isMuted = function () { return this._muted; };
   HearthAudio.prototype.getSettings = function () {
-    return { master: this._master, music: this._music, ambience: this._ambience, muted: this._muted };
+    return { master: this._master, music: this._music, ambience: this._ambience, effects: this._effects, muted: this._muted };
   };
   Object.defineProperties(HearthAudio.prototype, {
     master: { get: function () { return this._master; }, set: function (v) { this.setMaster(v); } },
