@@ -1,20 +1,28 @@
 /* Private save data stays separate from the visible-card journal and AI inputs. */
 (function(root,factory){var api=factory(typeof module==='object'&&module.exports?require('./poker.js'):root.Poker);if(typeof module==='object'&&module.exports)module.exports=api;else root.HearthSession=api;})(typeof globalThis!=='undefined'?globalThis:this,function(Poker){
  'use strict';
- var fields=['smallBlind','bigBlind','players','dealer','actor','street','board','currentBet','minRaise','handNumber','events','eventId','result','gameOver','deck'];
+ var fields=['smallBlind','bigBlind','startingStack','injected','players','dealer','actor','street','board','currentBet','minRaise','handNumber','events','eventId','result','gameOver','deck'];
  var copy=x=>JSON.parse(JSON.stringify(x)),integer=(x,min=0,max=100000)=>Number.isInteger(x)&&x>=min&&x<=max;
  function pack(table,ui){var state={};fields.forEach(k=>state[k]=table[k]);state.pending=Array.from(table.pending);return copy({version:2,savedAt:Date.now(),table:state,ui:ui});}
  function unpack(save){
   if(!save||save.version!==2)throw Error('Unrecognized saved hand.');var s=copy(save),t=s.table,u=s.ui;
   if(!t||!u||!Array.isArray(t.players)||!integer(t.players.length,2,7)||!['preflop','flop','turn','river','showdown'].includes(t.street)||!integer(t.dealer,0,t.players.length-1)||!(t.actor===null||integer(t.actor,0,t.players.length-1))||!integer(t.handNumber,1)||!integer(t.smallBlind,1)||!integer(t.bigBlind,t.smallBlind)||!integer(t.currentBet)||!integer(t.minRaise,1))throw Error('Invalid saved table.');
   var cards=[];for(var i=0;i<t.players.length;i++){var p=t.players[i];if(p.id!==i||typeof p.name!=='string'||p.name.length>50||!['stack','bet','totalBet','lastActionBet','lastRaiseAtAction'].every(k=>integer(p[k]))||p.bet>p.totalBet||!Array.isArray(p.hole)||![0,2].includes(p.hole.length))throw Error('Invalid saved player.');cards.push(...p.hole);}
-  if(t.players.reduce((n,p)=>n+p.stack+p.totalBet,0)!==t.players.length*500)throw Error('Saved chip totals are inconsistent.');
+  // Saves written before buy-ins were counted carry neither field; they can
+  // only have been written on an untouched table, so the old totals still hold.
+  if(t.startingStack===undefined)t.startingStack=500;
+  if(t.injected===undefined)t.injected=0;
+  if(!integer(t.startingStack,1)||!integer(t.injected,0))throw Error('Invalid saved stakes.');
+  // Play only moves chips between stacks, so the table total is the seats'
+  // buy-ins plus whatever has been bought back in since.
+  if(t.players.reduce((n,p)=>n+p.stack+p.totalBet,0)!==t.players.length*t.startingStack+t.injected)throw Error('Saved chip totals are inconsistent.');
   if(!Array.isArray(t.board)||![0,3,4,5].includes(t.board.length)||!Array.isArray(t.deck)||t.deck.length>52)throw Error('Invalid saved deck.');cards.push(...t.board,...t.deck);
   if(cards.some(c=>!c||!integer(c.rank,2,14)||!Poker.SUITS.includes(c.suit))||new Set(cards.map(Poker.cardKey)).size!==cards.length||cards.length>52)throw Error('Duplicate or invalid saved cards.');
   if(!Array.isArray(t.pending)||new Set(t.pending).size!==t.pending.length||t.pending.some(id=>!integer(id,0,t.players.length-1)||t.players[id].folded||t.players[id].allIn)||!Array.isArray(t.events)||t.events.length>10000||!integer(u.eventIndex,0,t.events.length)||!Array.isArray(u.visibleBoard)||u.visibleBoard.some((c,i)=>!t.board[i]||Poker.cardKey(c)!==Poker.cardKey(t.board[i]))||!Array.isArray(u.visibleSeats)||u.visibleSeats.length!==t.players.length)throw Error('Invalid saved turn.');
-  if(!integer(u.visiblePot,0,t.players.length*500)||!['preflop','flop','turn','river','showdown'].includes(u.visibleStreet)||typeof u.revealed!=='boolean'||u.visibleSeats.some(p=>!p||!integer(p.stack,0,t.players.length*500)||!integer(p.bet,0,t.players.length*500)||typeof p.folded!=='boolean'||typeof p.allIn!=='boolean'))throw Error('Invalid saved presentation.');
+  var chips=t.players.length*t.startingStack+t.injected;
+  if(!integer(u.visiblePot,0,chips)||!['preflop','flop','turn','river','showdown'].includes(u.visibleStreet)||typeof u.revealed!=='boolean'||u.visibleSeats.some(p=>!p||!integer(p.stack,0,chips)||!integer(p.bet,0,chips)||typeof p.folded!=='boolean'||typeof p.allIn!=='boolean'))throw Error('Invalid saved presentation.');
   if(t.actor!==null&&!t.pending.includes(t.actor)||!!t.result!==(t.street==='showdown'))throw Error('Inconsistent saved actor.');
-  var table=new Poker.Table({names:t.players.map(p=>p.name)});fields.forEach(k=>table[k]=t[k]);table.pending=new Set(t.pending);return {table:table,ui:u};
+  var table=new Poker.Table({names:t.players.map(p=>p.name),startingStack:t.startingStack,smallBlind:t.smallBlind,bigBlind:t.bigBlind});fields.forEach(k=>table[k]=t[k]);table.pending=new Set(t.pending);return {table:table,ui:u};
  }
  var pace={relaxed:1.45,normal:1,brisk:.6};
  function paceFactor(name){return pace[name]||1;}
