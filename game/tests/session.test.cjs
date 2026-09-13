@@ -33,3 +33,16 @@ test('a seat cannot buy in with chips left, or in the middle of a hand',()=>{let
  assert.throws(()=>t.rebuy(1),/still has chips/);
  t.newHand();t.players[1].stack=0;assert.throws(()=>t.rebuy(1),/Finish the hand/);
  assert.equal(t.injected,0,'a refused buy-in adds nothing');});
+test('a hand counts once however many times its result is replayed',()=>{
+ let r={wins:0,losses:0,net:0,lastHand:0};
+ let a=S.tally(r,1,740,500);
+ assert(a.counted);assert.deepEqual(a.record,{wins:1,losses:0,net:240,lastHand:1});
+ let again=S.tally(a.record,1,740,500);
+ assert.equal(again.counted,false,'restoring the same hand must not count it twice');
+ assert.equal(again.record,a.record,'and must not touch the record');
+ let b=S.tally(a.record,2,300,500);
+ assert.deepEqual(b.record,{wins:1,losses:1,net:40,lastHand:2});
+ let flat=S.tally(b.record,3,300,300);
+ assert(flat.counted,'a hand you broke even on still counts as played');
+ assert.deepEqual(flat.record,{wins:1,losses:1,net:40,lastHand:3});
+});

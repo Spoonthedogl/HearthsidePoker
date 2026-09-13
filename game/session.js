@@ -24,9 +24,16 @@
   if(t.actor!==null&&!t.pending.includes(t.actor)||!!t.result!==(t.street==='showdown'))throw Error('Inconsistent saved actor.');
   var table=new Poker.Table({names:t.players.map(p=>p.name),startingStack:t.startingStack,smallBlind:t.smallBlind,bigBlind:t.bigBlind});fields.forEach(k=>table[k]=t[k]);table.pending=new Set(t.pending);return {table:table,ui:u};
  }
+ // A result event is replayed whenever a saved hand is restored, so the
+ // running record and the evening's hand count must only move once per hand.
+ function tally(record,handNumber,stack,handStartStack){
+  if(!record||record.lastHand===handNumber)return {counted:false,record:record};
+  var delta=stack-handStartStack;
+  return {counted:true,record:{wins:record.wins+(delta>0?1:0),losses:record.losses+(delta<0?1:0),net:record.net+delta,lastHand:handNumber}};
+ }
  var pace={relaxed:1.45,normal:1,brisk:.6};
  function paceFactor(name){return pace[name]||1;}
  function explain(a,b){if(!b)return 'The strongest eligible hand takes this pot.';if(Poker.compare(a,b)===0)return 'The best five cards tie. Suits never break a tie; any odd chip goes clockwise from the dealer.';if(a.category!==b.category)return a.name+' beats '+b.name+'.';var i=a.tiebreak.findIndex((v,i)=>v!==b.tiebreak[i]),label=n=>Poker.RANK_NAMES[n]||String(n);var kicker=(a.category===1&&i>0)||(a.category===2&&i>1)||(a.category===3&&i>0)||(a.category===7&&i>0);return (kicker?'The '+label(a.tiebreak[i])+' kicker beats the '+label(b.tiebreak[i])+' kicker.':label(a.tiebreak[i])+' beats '+label(b.tiebreak[i])+' at the deciding rank.')+' Both hands are '+a.name+'.';}
  function recap(result,names){if(!result)return [];if(result.reason==='fold')return [{title:'Won without a showdown',text:'Everyone else folded. Unshown cards stay private.',winners:result.winners.filter(w=>w.wonAmount>0).map(w=>({name:names[w.id],amount:w.wonAmount,cards:[]}))}];var count=0;return result.pots.filter(p=>!p.uncalled).map(p=>{var shown=result.showdown.filter(h=>p.eligible.includes(h.id)),best=shown.find(h=>p.winners.includes(h.id)),others=shown.filter(h=>!p.winners.includes(h.id)).sort((a,b)=>Poker.compare(b.hand,a.hand));return {title:(count++===0?'Main pot':'Side pot '+(count-1))+' · '+p.amount+' chips',text:p.winners.length>1?explain(best.hand,best.hand):explain(best.hand,others[0]&&others[0].hand),winners:p.winners.map((id,index)=>({name:names[id],amount:Math.floor(p.amount/p.winners.length)+(index<p.amount%p.winners.length?1:0),cards:shown.find(h=>h.id===id).hand.bestCards,hand:shown.find(h=>h.id===id).hand.name}))};});}
- return {pack:pack,unpack:unpack,paceFactor:paceFactor,recap:recap,explain:explain};
+ return {pack:pack,unpack:unpack,paceFactor:paceFactor,recap:recap,explain:explain,tally:tally};
 });
