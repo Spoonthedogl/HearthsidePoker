@@ -134,6 +134,8 @@ body.compact .settings-row button{font-size:24px;padding:20px 24px;border-radius
 body.compact .primary{font-size:26px;padding:22px 28px;border-radius:6px}
 body.compact .pause-actions{display:flex;flex-wrap:wrap;gap:14px}
 body.compact .pause-actions button{font-size:24px;padding:20px 22px;border:1px solid #ad9265;border-radius:5px;flex:1 1 200px}
+body.compact .pause-leave{display:flex;flex-wrap:wrap;gap:14px;padding-top:18px}
+body.compact .pause-leave button{font-size:24px;padding:20px 22px;border-radius:5px;flex:1 1 200px}
 body.compact .journal-tabs button{font-size:24px;padding:16px 0 18px}
 /* Screen mode, window size and frame cap belong to the standalone build; on a
    phone the whole tab is inert, so Settings is just sound and motion. */
