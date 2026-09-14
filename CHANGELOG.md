@@ -29,6 +29,14 @@ newcomer to read.
   it says what the blinds are, how a hand plays from deal to showdown, and what
   check, call, raise and fold each mean, in plain words.
 
+### Under the bonnet
+
+- **Web and home-screen updates now reach returning players.** Each release's
+  stylesheets and scripts carry a version tag, so a fix is never masked by a
+  copy the browser or home-screen app cached from a previous visit. (Applied as
+  a follow-up to 1.5.1, after the fixed cat kept appearing in its old spot on a
+  device that had cached the earlier stylesheet.)
+
 ---
 
 ## v1.5.0 — 2026-09-13
