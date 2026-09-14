@@ -38,3 +38,13 @@
 .pot-area{top:506px}
 .board{top:548px}
 .nameplate strong{font-size:14px}.nameplate .bank{font-size:13px}.nameplate .persona{display:none}
+
+/* "See your chances" reads as a tappable control, not just a caption, so a
+   beginner knows the whole panel opens the hand guide. Sizing stays with the
+   per-layout rules for .hand-peek>span:last-child. */
+.peek-cta{display:inline-flex;align-items:center;gap:6px;margin-top:8px;padding:4px 12px;border:1px solid #b49d6988;border-radius:999px;background:#f3deb914;color:#ecc98d!important;font-weight:bold;line-height:1.35}
+.peek-cta b{margin-left:0;color:#f0c580}
+.hand-peek:hover .peek-cta{background:#f3deb926;border-color:#d8bd86}
+/* The possibility rows are buttons; make that obvious on a pointer device. */
+.guide-row:hover:not(.current){background:#ffffff0d}
+.guide-row:active{background:#ffffff16}
