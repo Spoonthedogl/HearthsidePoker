@@ -46,8 +46,15 @@
  function seatVariant(){return compact?'compact':'wide';}
  function touchDevice(){return matchMedia('(pointer:coarse)').matches;}
  function resize(){var box=HearthSeating.STAGE[seatVariant()];$('stage').style.transform='translate(-50%,-50%) scale('+Math.min(innerWidth/box.width,innerHeight/box.height)+')';}
+ // The on-screen keyboard (e.g. the raise amount field) shrinks innerHeight
+ // on many mobile browsers without the device actually rotating - reading
+ // that as "now landscape" flashed the rotate hint and could re-lay the
+ // portrait table out from under a raise in progress. screen.width/height
+ // are the physical screen's dimensions: they rotate with the device but,
+ // unlike the viewport, are never shrunk by an on-screen keyboard overlay.
+ function isPortrait(){return screen.height&&screen.width?screen.height>=screen.width:innerHeight>=innerWidth;}
  function applyMode(){
-  var narrow=Math.min(innerWidth,innerHeight)<=560,portrait=innerHeight>=innerWidth,want=narrow&&portrait;
+  var narrow=Math.min(innerWidth,innerHeight)<=560,portrait=isPortrait(),want=narrow&&portrait;
   if(portrait)rotateDismissed=false;
   $('rotateHint').classList.toggle('hidden',!(narrow&&!portrait&&touchDevice())||rotateDismissed);
   if(want!==compact){compact=want;document.body.classList.toggle('compact',compact);ambience.setFit(compact?'width':'cover');fitMotes();if(seatsMounted){configureSeats();render();}}
