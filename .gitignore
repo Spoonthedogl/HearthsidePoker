@@ -18,3 +18,9 @@ Thumbs.db
 
 # Cook/package bookkeeping, regenerated on every build.
 Build/**/FileOpenOrder/*.log
+
+# worker/ (the optional online-room server): installed deps and local
+# wrangler state, neither of which is source. package-lock.json IS kept, for
+# a reproducible `npm install`.
+worker/node_modules/
+worker/.wrangler/

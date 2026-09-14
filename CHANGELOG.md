@@ -1,5 +1,36 @@
 # Changelog
 
+## v1.6.0 — 2026-09-14
+
+Play with friends: a private table, joined by a short code.
+
+**Save compatibility:** unaffected. Nothing about single-player changes —
+this is a new, optional mode alongside it.
+
+### Added
+
+- **Play with friends**, from the same screen as "Take a seat". Create a
+  room and share the code it gives you, or join one a friend created.
+  Unclaimed seats are still played by the usual companions, so a two-friend
+  room looks and plays exactly like the table you already know.
+- A small always-on server (an optional self-hosted [Cloudflare
+  Worker](https://workers.cloudflare.com/), free tier, no payment method
+  required — see **worker/README.md**) referees online rooms using the exact
+  same rules engine the single-player game already uses. It is the only
+  place any hand or card is decided; no hole card is ever sent to a device
+  before it is genuinely revealed.
+- A dropped connection gets a short grace period to return before its seat
+  automatically checks or folds, so an evening never gets stuck waiting on
+  someone's connection.
+
+### Not yet included
+
+Free-text or voice chat, a spectator mode, joining a room already under way,
+and a visible turn-clock countdown. Online rooms also don't use the 12-hand
+"evening" or the club fund — they simply keep dealing hands.
+
+---
+
 ## v1.5.4 — 2026-09-14
 
 **Save compatibility:** unaffected.
