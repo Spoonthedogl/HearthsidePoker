@@ -48,3 +48,8 @@
 /* The possibility rows are buttons; make that obvious on a pointer device. */
 .guide-row:hover:not(.current){background:#ffffff0d}
 .guide-row:active{background:#ffffff16}
+
+/* Render card suits as monochrome text glyphs, never a device's colour-emoji
+   substitute (which pinches ♣ on some phones, e.g. Samsung). Belt-and-braces
+   with the U+FE0E selector in app.js; harmless where unsupported. */
+.card,.out-card,.row-cards i{font-variant-emoji:text}

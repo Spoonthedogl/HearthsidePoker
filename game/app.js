@@ -28,7 +28,10 @@
  function saveClub(){try{localStorage.setItem('hearthside-club',JSON.stringify(club));}catch(e){}}
  function applyComforts(){ambience.setComforts(HearthClub.lights(club));cat.setLiveliness(HearthClub.catLiveliness(club));}
  function eveningOver(){return eveningHands>=HearthClub.EVENING_HANDS;}
- var suit={s:'♠',h:'♥',d:'♦',c:'♣'},rank={11:'J',12:'Q',13:'K',14:'A'};
+ // Each suit carries a text-presentation selector (U+FE0E) so a device's colour
+ // emoji font can't substitute a glyph (Samsung renders a pinched ♣ otherwise);
+ // the monochrome text glyph also takes the CSS colour for red/four-colour decks.
+ var suit={s:'♠︎',h:'♥︎',d:'♦︎',c:'♣︎'},rank={11:'J',12:'Q',13:'K',14:'A'};
  var descriptions=['Your highest cards, when no stronger pattern is made.','Two cards of the same rank.','Two different pairs of matching ranks.','Three cards of the same rank.','Five consecutive ranks. An ace can be low or high.','Five cards of the same suit, in any order.','Three of one rank, plus a pair of another.','Four cards of the same rank.','Five consecutive ranks, all in the same suit.'];
  var examples=[['As','Jh','9c','6d','3s'],['Kh','Ks','9c','6d','3s'],['Kh','Ks','9c','9d','3s'],['7h','7s','7c','Kd','3s'],['9h','8s','7c','6d','5s'],['Ah','Jh','8h','6h','3h'],['Qh','Qs','Qc','8d','8s'],['5h','5s','5c','5d','As'],['9h','8h','7h','6h','5h']];
  // A phone-sized screen swaps the whole stage to the portrait design space
