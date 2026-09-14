@@ -1,5 +1,28 @@
 # Changelog
 
+## v1.5.2 — 2026-09-14
+
+Small follow-ups to v1.5.1: the cat actually sits down, and web updates reach
+you without a hard refresh.
+
+**Save compatibility:** unaffected.
+
+### Fixed
+
+- **The windowsill cat rests on its cushion.** v1.5.1 moved it onto the window
+  but left it hovering above the sill; it now sits properly on the cushion,
+  matching the desktop layout.
+
+### Under the bonnet
+
+- **Web and home-screen updates now reach returning players.** Each release's
+  stylesheets and scripts carry a version tag, so a fix is never masked by a
+  copy the browser or home-screen app cached from a previous visit — which is
+  why the v1.5.1 cat fix first appeared to do nothing on a phone that had the
+  old stylesheet cached.
+
+---
+
 ## v1.5.1 — 2026-09-14
 
 A pass over the phone layout and the parts of the game that were hard for a

@@ -8,7 +8,7 @@
  * returning player drops the previous version's cached files.
  */
 'use strict';
-var CACHE = 'hearthside-v1.5.1';
+var CACHE = 'hearthside-v1.5.2';
 var ASSET = /\.(?:png|jpe?g|webp|gif|svg|ico|mp3|ogg|wav|woff2?)$/i;
 
 self.addEventListener('install', function (e) {
