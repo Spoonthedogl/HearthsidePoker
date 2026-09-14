@@ -14,7 +14,7 @@ body.compact .shade{background:linear-gradient(#160f0c99,transparent 11%,transpa
    1440px desk size (768/1440). The windowsill cat is positioned in desk pixels,
    so without this it floats off its cushion and at the wrong size. Same sprite
    sheet and animations, just moved and scaled onto the fitted window. */
-body.compact .window-cat{left:178px;top:92px;width:72px;height:72px}
+body.compact .window-cat{left:178px;top:74px;width:72px;height:72px}
 
 body.compact #stage header{inset:20px 22px auto}
 body.compact .brand{gap:14px}
