@@ -83,16 +83,27 @@
     options = options || {};
     this.room = options.room;
     var server = options.server || defaultServer();
-    this.ws = new WebSocket(server + (server.indexOf('?') >= 0 ? '&' : '?') + 'room=' + encodeURIComponent(options.room));
-    this.ws.addEventListener('open', function () {
+    this._connectServer = server; // remembered so a later reconnect() can reopen the same server/room
+    var ws = new WebSocket(server + (server.indexOf('?') >= 0 ? '&' : '?') + 'room=' + encodeURIComponent(options.room));
+    this.ws = ws;
+    ws.addEventListener('open', function () {
       var create = !!options.create;
-      self.ws.send(JSON.stringify(create
+      ws.send(JSON.stringify(create
         ? {t: 'create', name: options.name, cfg: options.cfg, avatar: options.avatar}
         : {t: 'hello', name: options.name, token: options.token, avatar: options.avatar}));
     });
-    this.ws.addEventListener('message', function (event) { self._onMessage(event.data); });
-    this.ws.addEventListener('close', function () { self._settleAll(false); self._emit('close'); });
-    this.ws.addEventListener('error', function () { self._emit('error', {error: 'connection-failed'}); });
+    ws.addEventListener('message', function (event) { self._onMessage(event.data); });
+    // self.ws !== ws once disconnect()/a fresh connect() has already moved on -
+    // a late close event from an abandoned socket must not re-fire 'close'.
+    ws.addEventListener('close', function () { self._settleAll(false); if (self.ws === ws) self._emit('close'); });
+    ws.addEventListener('error', function () { self._emit('error', {error: 'connection-failed'}); });
+  };
+  // Reopens a fresh socket to the same room using the seat's existing token -
+  // the server's hello() reconnect path resends the full current state, so
+  // this is also how a client resyncs after an unexpected drop.
+  Client.prototype.reconnect = function () {
+    if (!this.token || !this.room) return;
+    this.connect({server: this._connectServer, room: this.room, token: this.token});
   };
 
   Client.prototype._onMessage = function (raw) {

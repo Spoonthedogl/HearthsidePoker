@@ -9,6 +9,7 @@
  audio.prepare(); // Open the silent device before the table's first interaction.
  var table=new Poker.Table({names:names}),started=false,busy=false,version=0,eventIndex=0;
  var online=false,onlineRoomCode=null; // true only inside an active online room; see the Online play block near the end of this file.
+ var reconnecting=false,reconnectAttempts=0; // a dropped socket gets a few quiet retries before online play gives up; see the Online play block.
  var visibleSeats=table.players.map(function(p){return {stack:p.stack,bet:0,folded:false,allIn:false,lastAction:''};});
  var companions=new HearthCompanions({onChange:renderSpeech});
  var computation=new HearthComputation(),guidePending={},guideErrors={};
@@ -324,7 +325,7 @@
   configureSeats();$('stage').classList.remove('seated');closeAll();renderActions();
  }
  function beginOnlinePlay(){
-  online=true;table=HearthOnline.table;names=table.names;version++;
+  online=true;reconnecting=false;reconnectAttempts=0;table=HearthOnline.table;names=table.names;version++;
   configureSeats();window.hearth.table=table;
   $('stage').classList.add('seated');started=true;joining=false;busy=false;activeSeat=null;
   closeAll(false);
@@ -356,12 +357,30 @@
   }
   if(t!==version||!online)return;busy=false;activeSeat=table.result?null:table.actor;render();if(table.actor===0&&!table.result)sound('turn');
  }
- HearthOnline.on('lobby',function(msg){if(!online)renderOnlineLobby(msg);});
+ HearthOnline.on('lobby',function(msg){if(!online)renderOnlineLobby(msg);else if(reconnecting){reconnecting=false;reconnectAttempts=0;}});
  // Once already online, driveOnline()'s own waitForEvents(t) call is what
- // wakes back up to consume a new push - nothing else needs to react here.
- HearthOnline.on('events',function(){if(!online)beginOnlinePlay();});
- HearthOnline.on('error',function(msg){if(!online)renderOnlineEntry(onlineErrorText(msg.error));});
- HearthOnline.on('close',function(){if(online){online=false;setMessage('The connection to the room was lost.');renderActions();}});
+ // wakes back up to consume a new push - nothing else needs to react here,
+ // except right after a reconnect: that loop already returned (its wait was
+ // cancelled when the old socket closed), so it has to be restarted here.
+ HearthOnline.on('events',function(){if(!online)beginOnlinePlay();else if(reconnecting){reconnecting=false;reconnectAttempts=0;beginOnlinePlay();}});
+ // A rejected action (a stale click, a timing race) must not leave the table
+ // stuck mid-"waiting" forever - fall back to whatever the table already
+ // knows, which is still correct since nothing here invalidated it.
+ HearthOnline.on('error',function(msg){
+  if(!online){renderOnlineEntry(onlineErrorText(msg.error));return;}
+  if(msg.error==='connection-failed')return; // the close handler below owns reconnect messaging
+  busy=false;activeSeat=table.result?null:table.actor;setMessage(onlineErrorText(msg.error));renderActions();
+ });
+ // A dropped connection (a phone locking, a network blip) gets a few quiet
+ // reconnect attempts - using the seat's own token, so it resumes the same
+ // seat - before giving up and telling the player outright.
+ HearthOnline.on('close',function(){
+  if(!online)return;
+  if(reconnectAttempts>=5){online=false;reconnecting=false;setMessage('The connection to the room was lost.');renderActions();return;}
+  reconnecting=true;reconnectAttempts++;busy=true;
+  setMessage('Reconnecting'+'.'.repeat(Math.min(reconnectAttempts,3))+'…');renderActions();
+  setTimeout(function(){if(online)HearthOnline.reconnect();},Math.min(1000*reconnectAttempts,4000));
+ });
 
  window.hearth={table:table,audio:audio,companions:companions,cat:cat,ambience:ambience,computation:computation,saveSession:saveSession,openJournal:openJournal,closeAll:closeAll,getState:function(){return {started:started,joining:joining,activeSeat:activeSeat,busy:busy,paused:paused(),visibleBoard:visibleBoard.map(function(c){return Object.assign({},c);}),revealed:revealed,visiblePot:visiblePot,visibleSeats:visibleSeats.map(function(p){return Object.assign({},p);}),companionSpeech:companions.getState()};}};
  var companionClock=Date.now();setInterval(function(){var now=Date.now();var context=companionContext();companions.tick(now-companionClock,context);cat.tick(now-companionClock,{hidden:context.hidden,paused:context.paused,gentle:$('reducedMotion').checked});ambience.setPaused(context.paused);companionClock=now;},80);document.addEventListener('visibilitychange',function(){companionClock=Date.now();companions.tick(0,companionContext());syncScenePause();});

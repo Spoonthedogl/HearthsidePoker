@@ -103,7 +103,12 @@ export class Room {
       await this._ensureAlarm();
     }
     this._deliver(result.out);
-    if (msg.t === 'start' || msg.t === 'act' || msg.t === 'next') await this._persist();
+    // Persist after anything that actually changed the room, not just the
+    // in-hand messages - a create/hello/configure that never gets persisted
+    // is invisible to a fresh instance if this one is evicted before the
+    // first hand starts, which turns into a confusing "owner-only" rejection
+    // for a room its own creator just made.
+    if (room.exists()) await this._persist();
   }
 
   _onClose(ws) {
