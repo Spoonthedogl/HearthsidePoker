@@ -8,6 +8,7 @@
  var teaReady=0;$('teaButton').addEventListener('click',function(){if(paused()||performance.now()<teaReady)return;teaReady=performance.now()+1000;audio.init();var sip=Math.random()<.5;audio.play(sip?'teaSip':'teaStir',{volume:.7,pan:.4});this.classList.remove('sipping','stirring');void this.offsetWidth;this.classList.add(sip?'sipping':'stirring');});
  audio.prepare(); // Open the silent device before the table's first interaction.
  var table=new Poker.Table({names:names}),started=false,busy=false,version=0,eventIndex=0;
+ var online=false,onlineRoomCode=null; // true only inside an active online room; see the Online play block near the end of this file.
  var visibleSeats=table.players.map(function(p){return {stack:p.stack,bet:0,folded:false,allIn:false,lastAction:''};});
  var companions=new HearthCompanions({onChange:renderSpeech});
  var computation=new HearthComputation(),guidePending={},guideErrors={};
@@ -70,7 +71,7 @@
  function emptyCard(i){var e=document.createElement('div');e.className='card empty';e.textContent=['✧','✧','✧','·','·'][i];e.title=['Flop','Flop','Flop','Turn','River'][i]+' · not dealt yet';return e;}
  function replaceCards(el,cards,opts){var sig=cards.map(function(c){return c?Poker.cardKey(c):'?';}).join(',')+'|'+(opts&&opts.best||[]).join(',');if(el.dataset.sig===sig)return;var old=(el.dataset.sig||'').split('|')[0].split(',');el.dataset.sig=sig;el.innerHTML='';cards.forEach(function(c,i){el.appendChild(card(c,{best:c&&opts&&opts.best&&opts.best.indexOf(Poker.cardKey(c))>=0,enter:opts&&opts.animate&&old[i]!==(c?Poker.cardKey(c):'?')}));});}
  function current(){return Poker.evaluate(table.players[0].hole.concat(visibleBoard));}
- function paused(){return !$('journal').classList.contains('hidden')||['settings','rules','confirmReset','recap','eveningClose','shelf'].some(function(id){return !$(id).classList.contains('hidden');});}
+ function paused(){return !$('journal').classList.contains('hidden')||['settings','rules','confirmReset','recap','eveningClose','shelf','online'].some(function(id){return !$(id).classList.contains('hidden');});}
  function syncScenePause(){var context=companionContext();$('stage').classList.toggle('scene-paused',context.paused||context.hidden);ambience.setPaused(context.paused);cat.tick(0,{paused:context.paused,hidden:context.hidden,gentle:$('reducedMotion').checked});}
  function wait(ms,t){return new Promise(function(resolve){var left=ms,last=Date.now();function tick(){if(t!==version){resolve(false);return;}var now=Date.now();if(!paused()&&!document.hidden)left-=(now-last)/HearthSession.paceFactor(pace);last=now;if(left<=0){resolve(true);return;}setTimeout(tick,40);}tick();});}
  function sound(name,id){audio.play(name,{pan:id>0?Number($('seat'+id).dataset.pan):0});}
@@ -90,7 +91,7 @@
  function seatPoint(id){var el=$('seat'+id);return el?[Number(el.dataset.chipX),Number(el.dataset.chipY)]:anchors().hero;}
  function chipFlight(id){if($('reducedMotion').checked)return;var a=anchors(),from=id===0?a.hero:seatPoint(id);for(var i=0;i<4;i++){var p=document.createElement('span');p.className='particle';p.textContent='◉';p.style.left=from[0]+i*3+'px';p.style.top=from[1]+'px';p.style.setProperty('--dx',(a.pot[0]-from[0])+'px');p.style.setProperty('--dy',(a.pot[1]-from[1])+'px');p.style.animationDuration=(.65*HearthSession.paceFactor(pace))+'s';p.style.animationDelay=i*.045+'s';$('particles').appendChild(p);setTimeout(function(n){return function(){n.remove();};}(p),950);}}
  function render(){var snap=table.snapshot(),ev=current(),keys=visibleBoard.length>=3?ev.bestCards.map(Poker.cardKey):[];
-  $('handNo').textContent='HAND '+Math.min(eveningHands+(revealed?0:1)||1,HearthClub.EVENING_HANDS)+' OF '+HearthClub.EVENING_HANDS;$('potValue').textContent=visiblePot.toLocaleString();$('blindsInfo').textContent='BLINDS '+table.smallBlind+' / '+table.bigBlind;
+  $('handNo').textContent=online?'HAND '+(table.handNumber||1):'HAND '+Math.min(eveningHands+(revealed?0:1)||1,HearthClub.EVENING_HANDS)+' OF '+HearthClub.EVENING_HANDS;$('potValue').textContent=visiblePot.toLocaleString();$('blindsInfo').textContent='BLINDS '+table.smallBlind+' / '+table.bigBlind;
   $('streetRibbon').textContent=visibleStreet==='idle'?'':visibleStreet.toUpperCase();
   var chips='';for(var c=0;c<Math.min(11,Math.ceil(visiblePot/15));c++)chips+='<i class="chip '+(c%3===1?'green':c%3===2?'purple':'')+'" style="left:'+((c%3)*15)+'px;bottom:'+Math.floor(c/3)*4+'px"></i>';$('chipPile').innerHTML=chips;
   for(var i=1;i<table.players.length;i++){var p=snap.players[i],v=visibleSeats[i],seat=$('seat'+i),mood=started?(v.folded?'folded':v.allIn?'allin':'playing'):'playing';seat.querySelector('.stack').textContent=v.stack.toLocaleString();seat.querySelector('.status').textContent=!started?'Ready':(activeSeat===i&&!revealed?'Their turn':v.lastAction||(v.folded?'Resting':''));seat.querySelector('.dealer-token').style.display=started&&snap.dealer===i?'block':'none';seat.classList.toggle('active',started&&activeSeat===i&&!revealed);seat.querySelector('.nameplate').setAttribute('aria-current',activeSeat===i?'true':'false');HearthPresentation.renderChips(seat.querySelector('.npc-chips'),v.stack,names[i]);seat.classList.toggle('folded',started&&v.folded);seat.dataset.mood=mood;var sprite=seat.querySelector('.sprite');sprite.setAttribute('role','img');sprite.setAttribute('aria-label',names[i]+', '+(mood==='allin'?'all in':mood==='folded'?'sitting this hand out':'playing'));replaceCards(seat.querySelector('.opponent-cards'),started?p.hole.map(function(c){return revealed?c:null;}):[null,null],{animate:true});}
@@ -109,7 +110,16 @@
  function setMessage(text,win){$('tableMessage').textContent=text;$('tableMessage').classList.toggle('winner-banner',!!win);}
  function renderActions(){var btns=$('actionButtons'),oldRaise=$('raisePanel');if(oldRaise)oldRaise.remove();raiseOpen=false;
   if(joining){$('turnText').textContent='TAKING YOUR SEAT';$('turnHint').textContent='';btns.innerHTML='<button disabled class="primary">Settling in…</button>';return;}
-  if(!started){$('turnText').textContent='YOUR CHAIR IS WAITING';$('turnHint').textContent=restore?(restore.version===2?'Your unfinished hand is saved.':'Your last finished table is saved.'):savedHandLost?'Your last hand could not be read back, so this is a fresh table. The club fund is safe.':'A friendly table. All make-believe chips.';btns.innerHTML='<button id="startButton" class="primary">'+(restore?'Return to the table':'Take a seat')+' <span>↗</span></button>';return;}
+  if(online){
+   if(!HearthOnline.started){$('turnText').textContent='IN THE LOBBY';$('turnHint').textContent='';btns.innerHTML='<button disabled class="primary">Waiting to begin…</button>';return;}
+   if(busy){$('turnText').textContent='WAITING';$('turnHint').textContent='';btns.innerHTML='<button disabled class="subtle-button">Fold</button><button disabled>Check / call</button><button disabled class="raise-button">Raise</button>';return;}
+   if(table.result){$('turnText').textContent='HAND COMPLETE';$('turnHint').textContent='';btns.innerHTML='<button id="onlineNextSubmit" class="primary">Ready for the next hand <span>↗</span></button>';return;}
+   if(table.actor!==0){$('turnText').textContent='WAITING';$('turnHint').textContent=(table.names[table.actor]||'Someone')+' is deciding.';btns.innerHTML='<button disabled>Cards in motion…</button>';return;}
+   var ol=table.legalActions();$('turnText').textContent='YOUR TURN';$('turnHint').textContent=ol.check?'':ol.call+' chips to call';
+   btns.innerHTML='<button data-action="fold" class="subtle-button">Fold <small>F</small></button><button data-action="'+(ol.check?'check':'call')+'" class="primary">'+HearthPresentation.callLabel(ol,table.players[0].stack)+' <small>C</small></button><button id="raiseToggle" class="raise-button" '+(!ol.canRaise?'disabled':'')+'>'+(table.currentBet?'Raise':'Bet')+' <span>⌃</span></button>';
+   return;
+  }
+  if(!started){$('turnText').textContent='YOUR CHAIR IS WAITING';$('turnHint').textContent=restore?(restore.version===2?'Your unfinished hand is saved.':'Your last finished table is saved.'):savedHandLost?'Your last hand could not be read back, so this is a fresh table. The club fund is safe.':'A friendly table. All make-believe chips.';btns.innerHTML='<button id="startButton" class="primary">'+(restore?'Return to the table':'Take a seat')+' <span>↗</span></button><button id="onlineButton">Play with friends</button>';return;}
   if(busy){$('turnText').textContent=activeSeat>0?names[activeSeat].toUpperCase()+'’S TURN':'DEALING';$('turnHint').textContent='';btns.innerHTML='<button disabled class="subtle-button">Fold</button><button disabled>Check / call</button><button disabled class="raise-button">Raise</button>';return;}
   if(revealed&&eveningOver()){$('turnText').textContent='THE EVENING WINDS DOWN';$('turnHint').textContent=HearthClub.EVENING_HANDS+' hands played. Time to settle up.';btns.innerHTML='<button id="recapButton">Review hand</button><button id="endEvening" class="primary">Settle up <span>↗</span></button>';return;}
   if(revealed){var busted=table.players[0].stack===0;$('turnText').textContent=busted?'OUT OF CHIPS':'HAND COMPLETE';$('turnHint').textContent=busted?'Buy back in and the evening carries on.':'';btns.innerHTML='<button id="recapButton">Review hand</button>'+(busted?'<button id="freshTable" class="subtle-button">Fresh table</button><button id="nextHand" class="primary">Rebuy '+table.startingStack+' chips <span>↗</span></button>':'<button id="nextHand" class="primary">Deal next hand <span>↗</span></button>');return;}
@@ -158,7 +168,11 @@
  // buy-in count, or the evening's take-home would be measured against a
  // stake that is no longer what the player actually put in.
  function reset(){eveningHands=0;buyIns=1;eveningClosed=false;eveningEarned=0;record={wins:0,losses:0,net:0,lastHand:0};version++;companions.clear();busy=false;activeSeat=null;joining=false;$('stage').classList.remove('joining');$('stage').classList.add('seated');table=new Poker.Table({names:names,difficulty:chosenDifficulty});handStartStack=table.startingStack;configureSeats();window.hearth.table=table;restore=null;checkpointData=null;safeStore('hearthside-session',null);closeAll();document.querySelectorAll('.thinking').forEach(function(e){e.classList.remove('thinking');});started=true;eventIndex=0;newHand();}
- function act(type,amount){if(!started||joining||busy||paused()||table.actor!==0||revealed)return;audio.init();try{table.act(0,type,amount);checkpoint();drive(version);}catch(err){setMessage(err.message);renderActions();}}
+ function act(type,amount){if(online){if(!started||busy||paused()||table.actor!==0)return;busy=true;activeSeat=null;render();HearthOnline.act(type,amount);driveOnlineAfterAction(version);return;}if(!started||joining||busy||paused()||table.actor!==0||revealed)return;audio.init();try{table.act(0,type,amount);checkpoint();drive(version);}catch(err){setMessage(err.message);renderActions();}}
+ // table.actor still shows MY turn until the server actually answers - drive()
+ // would see that stale value and stop immediately instead of waiting, so an
+ // action always waits for the server's first reply before replaying anything.
+ async function driveOnlineAfterAction(t){if(!await HearthOnline.waitForEvents(t))return;driveOnline(t);}
  function confirmRaise(){var n=Number($('raiseNumber').value);act('raise',n);}
  function raisePanel(){if(raiseOpen){confirmRaise();return;}var l=table.legalActions();if(!l.canRaise)return;raiseOpen=true;var min=Math.min(l.minRaiseTo,l.maxRaiseTo),p=document.createElement('div');p.className='raise-controls';p.id='raisePanel';p.innerHTML='<label>'+(table.currentBet?'Raise to':'Bet')+' (total this round)<input id="raiseNumber" type="number" min="'+min+'" max="'+l.maxRaiseTo+'" step="1" value="'+min+'" aria-label="Raise total"></label><input id="raiseRange" type="range" min="'+min+'" max="'+l.maxRaiseTo+'" value="'+min+'" aria-label="Raise amount slider"><div class="raise-presets"><button data-raise="min">Minimum</button><button data-raise="half">½ pot</button><button data-raise="pot">Pot</button><button data-raise="all">All in</button><button id="raiseConfirm" class="primary">Confirm</button></div>';$('actions').appendChild(p);sound('click');}
  function analysisKey(){return table.players[0].hole.concat(visibleBoard).map(Poker.cardKey).join(',');}
@@ -195,16 +209,16 @@
  function hypotheticalHTML(example){if(!example)return '<p>No example of this rare outcome appeared in the sample. It may still be possible.</p>';var futureKeys=example.futureBoard.map(Poker.cardKey);return '<p><b>One possible version of your hand</b><br>This is an illustration, not a prediction of the deck.</p><div class="example-hand">'+example.bestCards.map(function(c){var k=Poker.cardKey(c),isFuture=futureKeys.indexOf(k)>=0,label=isFuture?'POSSIBLE':example.usedHoleKeys.indexOf(k)>=0?'YOURS':'TABLE';return '<div class="example-slot '+(isFuture?'hypothetical':'')+'">'+card(c).outerHTML+'<small>'+label+'</small></div>';}).join('')+'</div>'+(example.futureBoard.length?'<p>Example future board: '+example.futureBoard.map(function(c){return (rank[c.rank]||c.rank)+suit[c.suit];}).join(' · ')+'. Dotted cards above have not been dealt.</p>':'');}
  function renderDetail(c){selectedCategory=c;var title=c===9?'Royal flush':Poker.CATEGORY_NAMES[c];var html='<div class="guide-detail"><b>'+title+'</b><br>'+(c===9?'Ten, jack, queen, king and ace in the same suit. This is the strongest straight flush.':descriptions[c])+cardExample(c===9?['Ah','Kh','Qh','Jh','10h']:examples[c]);if(guideTab==='possibilities'&&started){var a=getAnalysis(),row=a&&a.rows[c];if(row&&row.possible!==false)html+=hypotheticalHTML(row.example);if(row&&visibleBoard.length>=3&&visibleBoard.length<5){html+='<p>These unseen <b>next cards</b> immediately change your current hand to this stronger category. They are not guaranteed winning cards.</p>';if(row.outs.length)html+='<div class="out-cards">'+row.outs.map(function(k){var s=k.slice(-1),r=Number(k.slice(0,-1));return '<span class="out-card '+(s==='h'||s==='d'?'red ':'')+'suit-'+s+'">'+(rank[r]||r)+suit[s]+'</span>';}).join('')+'</div>';else html+='<p>No single next card immediately upgrades you to this category. The final-hand percentage also includes two-card possibilities when two board cards remain.</p>';}else if(visibleBoard.length===5)html+='<p>All community cards are visible. Your final category is settled.</p>';else html+='<p>The percentages sample possible five-card boards. Specific next-card improvements become useful once the flop appears.</p>';}html+='</div>';$('journalDetail').innerHTML=html;}
  function openJournal(){audio.init();delete guideErrors[analysisKey()];lastFocus=document.activeElement;closeAll(false);$('journalBackdrop').classList.remove('hidden');$('journal').classList.remove('hidden');syncScenePause();renderJournal();sound('guideOpen');$('closeJournal').focus();}
- function closeAll(focus){var had=paused();disarmDiscard();$('journal').classList.add('hidden');['settings','rules','confirmReset','recap','eveningClose','shelf'].forEach(function(id){$(id).classList.add('hidden');});$('journalBackdrop').classList.add('hidden');syncScenePause();if(had)sound('guideClose');if(focus!==false&&lastFocus&&lastFocus.isConnected)lastFocus.focus();}
+ function closeAll(focus){var had=paused();disarmDiscard();$('journal').classList.add('hidden');['settings','rules','confirmReset','recap','eveningClose','shelf','online'].forEach(function(id){$(id).classList.add('hidden');});$('journalBackdrop').classList.add('hidden');syncScenePause();if(had)sound('guideClose');if(focus!==false&&lastFocus&&lastFocus.isConnected)lastFocus.focus();}
  function openModal(id){audio.init();lastFocus=document.activeElement;closeAll(false);$('journalBackdrop').classList.remove('hidden');$(id).classList.remove('hidden');syncScenePause();sound('guideOpen');var focus=$(id).querySelector('button,input,select');if(focus)focus.focus();}
  document.addEventListener('click',function(e){var b=e.target.closest('button');if(!b||b.disabled)return;var id=b.id;if(b.dataset.close){closeAll();return;}if(b.dataset.action){act(b.dataset.action);return;}if(b.dataset.buy){var bought=HearthClub.buy(club,b.dataset.buy);if(bought.ok){club=bought.state;saveClub();applyComforts();sound('chips');}renderShelf();return;}if(b.dataset.tab){guideTab=b.dataset.tab;selectedCategory=null;document.querySelectorAll('.journal-tabs button').forEach(function(x){x.classList.toggle('selected',x===b);});sound('click');renderJournal();return;}if(b.dataset.category!==undefined){renderDetail(Number(b.dataset.category));sound('click');$('journalDetail').scrollIntoView({block:'nearest',behavior:$('reducedMotion').checked?'auto':'smooth'});return;}if(b.dataset.raise){var l=table.legalActions(),min=Math.min(l.minRaiseTo,l.maxRaiseTo),v=b.dataset.raise==='min'?min:b.dataset.raise==='all'?l.maxRaiseTo:table.currentBet+Math.round((table.pot+l.call)*(b.dataset.raise==='half'?.5:1));v=Math.max(min,Math.min(l.maxRaiseTo,v));$('raiseRange').value=$('raiseNumber').value=v;sound('chips');return;}
-  if(id==='resumeGame')closeAll();else if(id==='settingsRules')openModal('rules');else if(id==='quitGame'||id==='windowQuit')quitGame();else if(id==='discardQuit'){if(discardArmed)discardAndQuit();else armDiscard(b);}else if(id==='recapButton'){renderRecap();openModal('recap');}else if(id==='startButton')start();else if(id==='nextHand'||id==='recapNextHand'){if(busy||!revealed)return;if(eveningOver()){closeEvening();return;}closeAll(false);audio.init();if(table.players[0].stack===0)rebuy();else newHand();}else if(id==='endEvening'){if(busy||!revealed)return;closeEvening();}else if(id==='newEveningButton'){closeAll(false);audio.init();newEvening();}else if(id==='shelfButton'||id==='eveningShelf'){renderShelf();openModal('shelf');}else if(id==='freshTable'){if(busy||!revealed)return;closeAll(false);audio.init();reset();}else if(id==='guideButton'||id==='peekButton')openJournal();else if(id==='closeJournal')closeAll();else if(id==='soundButton'){syncSettings();openModal('settings');}else if(id==='tableSetup'){setupChoices();openModal('confirmReset');}else if(id==='rulesButton')openModal('rules');else if(id==='newTableButton'){setupChoices();openModal('confirmReset');}else if(id==='resetConfirm'){var selected=HearthRoster.selected();if(selected.length!==Number($('tableSize').value)-1)return;names=['You'].concat(selected);tableKind=HearthTables.find($('tableKind').value).id;chosenDifficulty=Poker.DIFFICULTIES.indexOf($('tableDifficulty').value)>=0?$('tableDifficulty').value:'standard';reset();}else if(id==='raiseToggle')raisePanel();else if(id==='raiseConfirm')confirmRaise();else if(id==='muteButton'){audio.toggleMute();syncSettings();saveSettings();}else if(id==='testSound'){audio.init();audio.play('chips',{intensity:1});}
+  if(id==='resumeGame')closeAll();else if(id==='settingsRules')openModal('rules');else if(id==='quitGame'||id==='windowQuit')quitGame();else if(id==='discardQuit'){if(discardArmed)discardAndQuit();else armDiscard(b);}else if(id==='recapButton'){renderRecap();openModal('recap');}else if(id==='startButton')start();else if(id==='onlineButton'){startOnlineFlow();}else if(id==='onlineCreateSubmit')onlineCreateRoom();else if(id==='onlineJoinSubmit')onlineJoinRoom();else if(id==='onlineStartSubmit')HearthOnline.start();else if(id==='onlineNextSubmit'){busy=true;render();HearthOnline.next();driveOnlineAfterAction(version);}else if(id==='onlineLeaveSubmit')onlineLeaveRoom();else if(id==='nextHand'||id==='recapNextHand'){if(busy||!revealed)return;if(eveningOver()){closeEvening();return;}closeAll(false);audio.init();if(table.players[0].stack===0)rebuy();else newHand();}else if(id==='endEvening'){if(busy||!revealed)return;closeEvening();}else if(id==='newEveningButton'){closeAll(false);audio.init();newEvening();}else if(id==='shelfButton'||id==='eveningShelf'){renderShelf();openModal('shelf');}else if(id==='freshTable'){if(busy||!revealed)return;closeAll(false);audio.init();reset();}else if(id==='guideButton'||id==='peekButton')openJournal();else if(id==='closeJournal')closeAll();else if(id==='soundButton'){syncSettings();openModal('settings');}else if(id==='tableSetup'){setupChoices();openModal('confirmReset');}else if(id==='rulesButton')openModal('rules');else if(id==='newTableButton'){setupChoices();openModal('confirmReset');}else if(id==='resetConfirm'){var selected=HearthRoster.selected();if(selected.length!==Number($('tableSize').value)-1)return;names=['You'].concat(selected);tableKind=HearthTables.find($('tableKind').value).id;chosenDifficulty=Poker.DIFFICULTIES.indexOf($('tableDifficulty').value)>=0?$('tableDifficulty').value:'standard';reset();}else if(id==='raiseToggle')raisePanel();else if(id==='raiseConfirm')confirmRaise();else if(id==='muteButton'){audio.toggleMute();syncSettings();saveSettings();}else if(id==='testSound'){audio.init();audio.play('chips',{intensity:1});}
  });
  $('gamePace').addEventListener('change',function(){pace=this.value;$('stage').style.setProperty('--pace',HearthSession.paceFactor(pace));saveSettings();});
  $('journalBackdrop').addEventListener('click',function(){closeAll();});
  document.addEventListener('input',function(e){var id=e.target.id;if(id==='raiseRange')$('raiseNumber').value=e.target.value;if(id==='raiseNumber'&&$('raiseRange'))$('raiseRange').value=e.target.value;if(id==='masterVolume')audio.setMaster(Number(e.target.value)/100);if(id==='musicVolume')audio.setMusic(Number(e.target.value)/100);if(id==='ambienceVolume')audio.setAmbience(Number(e.target.value)/100);if(id==='effectsVolume')audio.setEffects(Number(e.target.value)/100);if(id==='reducedMotion'){$('stage').classList.toggle('gentle',e.target.checked);cat.tick(0,{gentle:e.target.checked,paused:paused(),hidden:document.hidden});}if(id==='fourColour')document.body.classList.toggle('four-colour',e.target.checked);if(id==='largeText')document.body.classList.toggle('large-text',e.target.checked);if(['masterVolume','musicVolume','ambienceVolume','effectsVolume','reducedMotion','fourColour','largeText'].indexOf(id)>=0)queueSettingsSave();});
  function syncSettings(){$('masterVolume').value=audio.getMaster()*100;$('effectsVolume').value=audio.getEffects()*100;$('musicVolume').value=audio.getMusic()*100;$('ambienceVolume').value=audio.getAmbience()*100;$('muteButton').textContent=audio.isMuted()?'Unmute sounds':'Mute all';$('gamePace').value=pace;saveSession();}
- document.addEventListener('keydown',function(e){if(e.key==='Escape'){e.preventDefault();if(e.repeat)return;if(paused())closeAll();else{if(raiseOpen)renderActions();syncSettings();openModal('settings');}return;}if(e.key==='Tab'&&paused()){var modal=['journal','settings','rules','confirmReset','recap','eveningClose','shelf'].map($).find(function(x){return !x.classList.contains('hidden');});var focusable=Array.from(modal.querySelectorAll('button:not(:disabled),input:not(:disabled),select:not(:disabled)')).filter(function(el){return el.getClientRects().length>0;});if(focusable.length){var first=focusable[0],last=focusable[focusable.length-1];if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus();}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus();}}return;}if(e.key==='Enter'&&e.target.id==='raiseNumber'){e.preventDefault();confirmRaise();return;}if(e.target.tagName==='INPUT'||e.target.tagName==='SELECT')return;if(e.key.toLowerCase()==='h'){e.preventDefault();if(!$('journal').classList.contains('hidden'))closeAll();else openJournal();}if(paused()||e.repeat)return;if(e.key.toLowerCase()==='c'&&started&&table.actor===0&&!busy)act(table.legalActions().check?'check':'call');if(e.key.toLowerCase()==='f')act('fold');});
+ document.addEventListener('keydown',function(e){if(e.key==='Escape'){e.preventDefault();if(e.repeat)return;if(paused())closeAll();else{if(raiseOpen)renderActions();syncSettings();openModal('settings');}return;}if(e.key==='Tab'&&paused()){var modal=['journal','settings','rules','confirmReset','recap','eveningClose','shelf','online'].map($).find(function(x){return !x.classList.contains('hidden');});var focusable=Array.from(modal.querySelectorAll('button:not(:disabled),input:not(:disabled),select:not(:disabled)')).filter(function(el){return el.getClientRects().length>0;});if(focusable.length){var first=focusable[0],last=focusable[focusable.length-1];if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus();}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus();}}return;}if(e.key==='Enter'&&e.target.id==='raiseNumber'){e.preventDefault();confirmRaise();return;}if(e.target.tagName==='INPUT'||e.target.tagName==='SELECT')return;if(e.key.toLowerCase()==='h'){e.preventDefault();if(!$('journal').classList.contains('hidden'))closeAll();else openJournal();}if(paused()||e.repeat)return;if(e.key.toLowerCase()==='c'&&started&&table.actor===0&&!busy)act(table.legalActions().check?'check':'call');if(e.key.toLowerCase()==='f')act('fold');});
  var npcHoverTimes={},lastNpcSound=0;
  document.addEventListener('companion-hover',function(e){if(paused()||document.hidden)return;var now=performance.now(),key=e.detail.character,el=e.target;if(now-(npcHoverTimes[key]||-9999)<4000)return;npcHoverTimes[key]=now;el.classList.remove('hover-react');void el.offsetWidth;el.classList.add('hover-react');setTimeout(function(){el.classList.remove('hover-react');},1150);if(started&&now-lastNpcSound>750){audio.play('npc_'+key,{volume:.45,pan:Number(el.dataset.pan)});lastNpcSound=now;}});
  var lastHover=0,lastCardHover=0,pointerHovers=matchMedia('(hover:hover)').matches;
@@ -228,6 +242,120 @@
    ctx.clearRect(0,0,cv.width,cv.height);painted=true;
    motes.forEach(function(m){m.y-=m.s;m.x+=Math.sin(frames*.002+m.p)*.13;if(m.y<0)m.y=cv.height;ctx.fillStyle='rgba(242,203,134,'+(.10+.10*Math.sin(frames*.013+m.p))+')';ctx.fillRect(Math.floor(m.x/2)*2,Math.floor(m.y/2)*2,2,2);});}
   frame();}atmosphere();
+ /* ---------- Online play ----------
+  * An optional private room, joined by a generated code, played over a
+  * Cloudflare Worker (see game/multiplayer.js and worker/). Nothing above
+  * this line changes for single-player: `online` stays false until a player
+  * explicitly creates or joins a room, and every branch above that checks
+  * it leaves the existing single-player path byte-for-byte as it was.
+  *
+  * The server is the only place any hand or action is decided; this file's
+  * job online is exactly what it already does for single-player - replay a
+  * public event log with the table's chosen pace, and turn a button click
+  * into one message. table.legalActions()/table.players[0].hole already
+  * come from the server pre-shaped as if seat 0 were always the human (see
+  * worker/view.js's rotation), so render()/renderActions()/configureSeats()
+  * need no changes at all to draw an online table.
+  *
+  * Deliberately out of scope here (see the project's plan): the club fund
+  * and 12-hand "evening" never apply online - eveningHands simply never
+  * moves in this file for an online table, so eveningOver() stays false and
+  * the existing single-player settle-up screen never appears. Reconnect
+  * UI, a turn-clock countdown, and text/voice chat are not built yet either.
+  */
+ function onlineSavedName(){try{return localStorage.getItem('hearthside-online-name')||'';}catch(e){return '';}}
+ function onlineSaveName(name){try{localStorage.setItem('hearthside-online-name',name);}catch(e){}}
+ function onlineErrorText(code){return {'no-such-room':'That room doesn’t exist. Check the code and try again.','room-full':'That room is already full.','room-already-started':'That room has already started without you.','already-created':'That code is already taken — try Create again for a new one.','connection-failed':'Couldn’t reach the room server. It may not be set up yet — see worker/README.md.'}[code]||'Something went wrong. Please try again.';}
+ function renderOnlineEntry(errorText){
+  var body=$('onlineBody');body.innerHTML='<label>Your name<input id="onlineName" maxlength="24" placeholder="Your name"></label>'+
+   '<h3>Create a private room</h3><label>Players<select id="onlineSeatCount"><option value="2">2 players</option><option value="3">3 players</option><option value="4" selected>4 players</option><option value="5">5 players</option><option value="6">6 players</option><option value="7">7 players</option></select></label>'+
+   '<label>Companions<select id="onlineDifficulty"><option value="gentle">Gentle</option><option value="standard" selected>Standard</option><option value="sharp">Sharp</option></select></label>'+
+   '<label>The evening<select id="onlineTableKind"></select></label>'+
+   '<div class="settings-row"><button id="onlineCreateSubmit" class="primary">Create a room</button></div>'+
+   '<h3>Join a friend’s room</h3><label>Room code<input id="onlineCode" maxlength="9" placeholder="BCDF-GH" style="text-transform:uppercase"></label>'+
+   '<div class="settings-row"><button id="onlineJoinSubmit" class="primary">Join</button></div>'+
+   '<p id="onlineError" class="pace-note"></p>';
+  var kind=$('onlineTableKind');HearthTables.tables.forEach(function(t){var o=document.createElement('option');o.value=t.id;o.textContent=t.name;kind.appendChild(o);});
+  $('onlineName').value=onlineSavedName();
+  if(errorText)$('onlineError').textContent=errorText;
+ }
+ function renderOnlineLobby(msg){
+  var body=$('onlineBody');body.innerHTML='';
+  var codeLine=document.createElement('p');codeLine.className='pace-note';codeLine.appendChild(document.createTextNode('Room code: '));
+  var codeStrong=document.createElement('strong');codeStrong.textContent=onlineRoomCode?HearthRoomCode.display(onlineRoomCode):'…';codeLine.appendChild(codeStrong);
+  body.appendChild(codeLine);
+  var list=document.createElement('ul');list.className='log-list';
+  (msg.seats||[]).forEach(function(s){var li=document.createElement('li');li.textContent=(s.kind==='ai'?'Companion · ':s.connected?'':'Away · ')+s.name;list.appendChild(li);});
+  body.appendChild(list);
+  if(HearthOnline.owner){var startBtn=document.createElement('button');startBtn.id='onlineStartSubmit';startBtn.className='primary';startBtn.textContent='Deal the first hand';body.appendChild(startBtn);}
+  else{var waiting=document.createElement('p');waiting.className='pace-note';waiting.textContent='Waiting for the host to deal.';body.appendChild(waiting);}
+  var leaveBtn=document.createElement('button');leaveBtn.id='onlineLeaveSubmit';leaveBtn.textContent='Leave the room';body.appendChild(leaveBtn);
+ }
+ function startOnlineFlow(){closeAll(false);openModal('online');renderOnlineEntry();}
+ function onlineCreateRoom(){
+  var name=($('onlineName').value||'').trim()||'Guest';onlineSaveName(name);
+  onlineRoomCode=HearthRoomCode.generate();
+  HearthOnline.connect({room:onlineRoomCode,name:name,create:true,cfg:{seatCount:Number($('onlineSeatCount').value),difficulty:$('onlineDifficulty').value,tableKind:$('onlineTableKind').value}});
+ }
+ function onlineJoinRoom(){
+  var name=($('onlineName').value||'').trim()||'Guest';onlineSaveName(name);
+  var code=HearthRoomCode.normalize($('onlineCode').value);
+  if(!code){renderOnlineEntry('That doesn’t look like a room code.');return;}
+  onlineRoomCode=code;
+  HearthOnline.connect({room:code,name:name});
+ }
+ function onlineLeaveRoom(){
+  HearthOnline.leave();HearthOnline.disconnect();
+  online=false;started=false;joining=false;busy=false;activeSeat=null;version++;
+  // table/names must not be left pointing at the online room: if no saved
+  // single-player hand exists, the next "Take a seat" click calls newHand()
+  // directly on whatever table/names currently are, with no reconstruction
+  // in between - so this has to already be a fresh, ordinary local table.
+  // (If a saved hand DOES exist, start()'s restore path rebuilds both from
+  // scratch anyway, making this harmless in that case too.)
+  names=['You','Juniper','Luna','Moss'];table=new Poker.Table({names:names,difficulty:chosenDifficulty});window.hearth.table=table;
+  configureSeats();$('stage').classList.remove('seated');closeAll();renderActions();
+ }
+ function beginOnlinePlay(){
+  online=true;table=HearthOnline.table;names=table.names;version++;
+  configureSeats();window.hearth.table=table;
+  $('stage').classList.add('seated');started=true;joining=false;busy=false;activeSeat=null;
+  closeAll(false);
+  eventIndex=0;visibleSeats=table.players.map(function(p){return {stack:p.stack,bet:0,folded:false,allIn:false,lastAction:''};});visibleBoard=[];visiblePot=0;visibleStreet='preflop';revealed=false;
+  driveOnline(version);
+ }
+ // The online equivalent of drive(): replays the server's public event log
+ // with the same pacing/sound/particle treatment as single-player, but never
+ // calls checkpoint() (online has nothing to do with the local save) and
+ // never touches the evening/tally bookkeeping (online rooms don't use it).
+ // Where single-player would call table.stepAI() for a non-human seat, this
+ // waits for the server's next push instead - the server has already
+ // resolved every AI turn by the time that push arrives.
+ async function driveOnline(t){
+  busy=true;activeSeat=null;render();
+  while(t===version&&online){
+   while(eventIndex<table.events.length){
+    var e=table.events[eventIndex];applyPublicEvent(e);
+    if(e.type==='hand-start'){sound('shuffle');visibleStreet='preflop';visibleBoard=[];revealed=false;visiblePot=0;render();for(var d=0;d<table.players.filter(function(p){return p.hole.length;}).length*2;d++){sound('deal',d%table.players.length);if(!await wait(75,t))return;}setMessage('');}
+    if(e.type==='blind'||e.type==='action'){visiblePot+=e.amount||0;if(e.type==='action'){sound(e.action==='call'?'chips':e.action==='allin'?'raise':e.action,e.playerId);setMessage((table.names[e.playerId]||'Someone')+' · '+e.text);}else sound('chips',e.playerId);if(e.amount)chipFlight(e.playerId);render();if(!await wait(e.type==='blind'?550:350,t))return;}
+    if(e.type==='street'){visibleStreet=e.street;setMessage({flop:'',turn:'',river:''}[e.street]);for(var k=Math.max(0,visibleBoard.length-(e.board.length-e.cards.length));k<e.cards.length;k++){visibleBoard.push(e.cards[k]);sound('flip');render();if(!await wait(320,t))return;}if(!await wait(220,t))return;}
+    if(e.type==='result'){visibleStreet='showdown';revealed=true;visiblePot=e.result.totalPot;var wins=e.result.winners.filter(function(w){return w.wonAmount>0;});var bonusText=(e.result.bonus||[]).map(function(b){return (b.playerId===0?'You pocket':(table.names[b.playerId]||'Someone')+' pockets')+' a Jack-Two bonus of '+b.amount+' from the table!';}).join(' ');setMessage(HearthPresentation.resultLabel(e.result,table.names)+(bonusText?' · '+bonusText:''),true);var humanWin=wins.some(function(w){return w.id===0;});sound(humanWin?'win':'lose');var wa=anchors();burst(humanWin?wa.heroWin[0]:seatPoint(wins[0]?wins[0].id:0)[0],humanWin?wa.heroWin[1]:wa.rivalWinY,humanWin?22:9);$('potValue').classList.add('burst');setTimeout(function(){$('potValue').classList.remove('burst');},500);render();if(!await wait(500,t))return;}
+    eventIndex++;
+   }
+   if(!online)return;
+   if(table.result||table.actor===0||table.actor===null)break;
+   activeSeat=table.actor;render();
+   if(!await HearthOnline.waitForEvents(t))return;
+  }
+  if(t!==version||!online)return;busy=false;activeSeat=table.result?null:table.actor;render();if(table.actor===0&&!table.result)sound('turn');
+ }
+ HearthOnline.on('lobby',function(msg){if(!online)renderOnlineLobby(msg);});
+ // Once already online, driveOnline()'s own waitForEvents(t) call is what
+ // wakes back up to consume a new push - nothing else needs to react here.
+ HearthOnline.on('events',function(){if(!online)beginOnlinePlay();});
+ HearthOnline.on('error',function(msg){if(!online)renderOnlineEntry(onlineErrorText(msg.error));});
+ HearthOnline.on('close',function(){if(online){online=false;setMessage('The connection to the room was lost.');renderActions();}});
+
  window.hearth={table:table,audio:audio,companions:companions,cat:cat,ambience:ambience,computation:computation,saveSession:saveSession,openJournal:openJournal,closeAll:closeAll,getState:function(){return {started:started,joining:joining,activeSeat:activeSeat,busy:busy,paused:paused(),visibleBoard:visibleBoard.map(function(c){return Object.assign({},c);}),revealed:revealed,visiblePot:visiblePot,visibleSeats:visibleSeats.map(function(p){return Object.assign({},p);}),companionSpeech:companions.getState()};}};
  var companionClock=Date.now();setInterval(function(){var now=Date.now();var context=companionContext();companions.tick(now-companionClock,context);cat.tick(now-companionClock,{hidden:context.hidden,paused:context.paused,gentle:$('reducedMotion').checked});ambience.setPaused(context.paused);companionClock=now;},80);document.addEventListener('visibilitychange',function(){companionClock=Date.now();companions.tick(0,companionContext());syncScenePause();});
  configureSeats();applyComforts();$('stage').style.setProperty('--pace',HearthSession.paceFactor(pace));syncSettings();companions.clear();render();setTimeout(function(){if(!started)companions.handle({type:'greeting'},companionContext());},600);

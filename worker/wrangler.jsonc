@@ -1,0 +1,14 @@
+{
+  // Deploy: from this worker/ folder, `wrangler login` once, then
+  // `wrangler deploy`. Paste the resulting workers.dev URL (as wss://) into
+  // game/multiplayer.js's SERVER constant. See worker/README.md.
+  "name": "hearthside-rooms",
+  "main": "index.js",
+  "compatibility_date": "2026-09-01",
+  "durable_objects": {
+    "bindings": [{ "name": "ROOMS", "class_name": "Room" }]
+  },
+  // SQLite storage is mandatory for a Durable Object on the free Workers
+  // plan - this is the one line that keeps the whole thing free.
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["Room"] }]
+}

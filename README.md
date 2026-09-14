@@ -28,6 +28,12 @@ There are three ways to play on a phone, all free and needing no account:
 
 The web/home-screen versions are published from `game/` to GitHub Pages by `.github/workflows/pages.yml`. The Android app is a thin [Capacitor](https://capacitorjs.com) wrapper around the exact same `game/` files; see **mobile/README.md** to rebuild or update it.
 
+## Play with friends
+
+An optional private table for people on their own devices: one player creates a room and shares a short code (no public matchmaking, no direct IP connection); everyone else joins with it. Unclaimed seats are still played by the companions, so a two-friend room looks and plays exactly like the single-player table. Online rooms don't use the 12-hand evening or the club fund — they just play hands.
+
+This needs a small always-on server, run on [Cloudflare Workers](https://workers.cloudflare.com/)' free tier (no payment method required) — see **worker/README.md** to deploy your own. The referee is the same `game/poker.js` rules engine the single-player game uses, imported directly rather than reimplemented, and every hole card stays server-side until a genuine showdown reveals it.
+
 ## Seated cast and table sizes
 
 Table setup supports every size from 2 to 7 total players. Seats follow clockwise order around the oval, with the human at the near edge. All six companions have full seated artwork, visible chairs, and three distinct mood poses. Right-side guests face inward; near-side guests appear in front of the rail. Clipper now wears a navy double-breasted jacket and copper cravat, with low pince-nez on his snout. See **SEATED_TABLE_UPDATE.md** and **SEATED_ART_PROMPTS.md**.

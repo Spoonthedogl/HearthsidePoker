@@ -14,5 +14,7 @@ jobs:
         with:
           node-version: '20'
       # No dependencies and no build step: the game is plain files, and the
-      # suite is the thing that would have caught the save bug.
-      - run: node --test game/tests/*.test.cjs
+      # suite is the thing that would have caught the save bug. worker/tests
+      # covers the optional online-room server (also plain files, no
+      # wrangler/network needed to test its logic).
+      - run: node --test game/tests/*.test.cjs worker/tests/*.test.cjs
