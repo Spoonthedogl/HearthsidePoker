@@ -10,6 +10,11 @@ body.compact button{-webkit-tap-highlight-color:transparent}
    the hearth. Fit it to the width as a top band and fade into the dark. */
 body.compact .room{background-size:100% auto;background-position:center top;background-repeat:no-repeat}
 body.compact .shade{background:linear-gradient(#160f0c99,transparent 11%,transparent 22%,#191110e0 36%,#191110 47%);box-shadow:none}
+/* The room art is fitted to the width here, so it is drawn at about half its
+   1440px desk size (768/1440). The windowsill cat is positioned in desk pixels,
+   so without this it floats off its cushion and at the wrong size. Same sprite
+   sheet and animations, just moved and scaled onto the fitted window. */
+body.compact .window-cat{left:190px;top:56px;width:61px;height:61px}
 
 body.compact #stage header{inset:20px 22px auto}
 body.compact .brand{gap:14px}
@@ -44,6 +49,10 @@ body.compact .chip-pile{margin-left:18px;height:34px;width:64px;transform:scale(
 body.compact #stage .board{left:203px;top:515px;gap:8px}
 body.compact #stage .board .card{width:66px;height:92px}
 body.compact #stage .board .card .corner{font-size:22px;top:4px;left:5px}
+/* The rule above hits both corners; without resetting the bottom one it keeps
+   its base right/bottom too, gets all four edges pinned, and stretches across
+   the whole card. Put the rotated index back in the bottom-right. */
+body.compact #stage .board .card .corner.bottom{top:auto;left:auto;right:5px;bottom:4px}
 body.compact #stage .board .card .center-suit{font-size:36px}
 body.compact #stage .board .card.empty{font-size:26px}
 /* No room for the deck beside a seat's cards; the teacup is worth keeping
@@ -83,6 +92,7 @@ body.compact #stage .human-seat{left:282px;top:872px;width:204px}
 body.compact .hole-cards{gap:12px}
 body.compact #stage .hole-cards .card{width:96px;height:133px;border-radius:9px}
 body.compact #stage .hole-cards .card .corner{font-size:30px;top:7px;left:9px}
+body.compact #stage .hole-cards .card .corner.bottom{top:auto;left:auto;right:9px;bottom:7px}
 body.compact #stage .hole-cards .card .center-suit{font-size:54px}
 body.compact .your-label{font-size:21px;letter-spacing:1.6px;top:-6px}
 body.compact .your-label .dealer-token{left:6px;top:-4px}
@@ -176,6 +186,7 @@ body.compact .guide-row .chance{font-size:24px}
 body.compact .guide-row .bar{left:56px;max-width:none;right:130px;height:3px}
 body.compact .visible-cards .card{width:60px;height:80px;border-width:2px}
 body.compact .visible-cards .card .corner{font-size:17px;left:4px;top:3px}
+body.compact .visible-cards .card .corner.bottom{top:auto;left:auto;right:4px;bottom:3px}
 body.compact .visible-cards .card .center-suit{font-size:28px}
 body.compact .visible-divider{height:48px}
 body.compact .journal-note{font-size:20px;line-height:1.6}
