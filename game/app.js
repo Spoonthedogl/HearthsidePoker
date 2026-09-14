@@ -11,6 +11,7 @@
  var online=false,onlineRoomCode=null; // true only inside an active online room; see the Online play block near the end of this file.
  var reconnecting=false,reconnectAttempts=0; // a dropped socket gets a few quiet retries before online play gives up; see the Online play block.
  var onlineHandNumber=0; // which hand driveOnline's local replay state (eventIndex, visibleSeats, ...) is caught up to; see the Online play block.
+ var onlineRejoining=false; // true only while attempting to resume a saved session from a fresh page load; see the Online play block.
  var visibleSeats=table.players.map(function(p){return {stack:p.stack,bet:0,folded:false,allIn:false,lastAction:''};});
  var companions=new HearthCompanions({onChange:renderSpeech});
  var computation=new HearthComputation(),guidePending={},guideErrors={};
@@ -128,7 +129,7 @@
    btns.innerHTML='<button data-action="fold" class="subtle-button">Fold <small>F</small></button><button data-action="'+(ol.check?'check':'call')+'" class="primary">'+HearthPresentation.callLabel(ol,table.players[0].stack)+' <small>C</small></button><button id="raiseToggle" class="raise-button" '+(!ol.canRaise?'disabled':'')+'>'+(table.currentBet?'Raise':'Bet')+' <span>⌃</span></button>';
    return;
   }
-  if(!started){$('turnText').textContent='YOUR CHAIR IS WAITING';$('turnHint').textContent=restore?(restore.version===2?'Your unfinished hand is saved.':'Your last finished table is saved.'):savedHandLost?'Your last hand could not be read back, so this is a fresh table. The club fund is safe.':'A friendly table. All make-believe chips.';btns.innerHTML='<button id="startButton" class="primary">'+(restore?'Return to the table':'Take a seat')+' <span>↗</span></button><button id="onlineButton">Play with friends</button>';return;}
+  if(!started){$('turnText').textContent='YOUR CHAIR IS WAITING';$('turnHint').textContent=restore?(restore.version===2?'Your unfinished hand is saved.':'Your last finished table is saved.'):savedHandLost?'Your last hand could not be read back, so this is a fresh table. The club fund is safe.':'A friendly table. All make-believe chips.';var savedOnline=onlineSavedSession();btns.innerHTML='<button id="startButton" class="primary">'+(restore?'Return to the table':'Take a seat')+' <span>↗</span></button><button id="onlineButton">Play with friends</button>'+(savedOnline?'<button id="onlineRejoinButton">Rejoin room '+HearthRoomCode.display(savedOnline.room)+'</button>':'');return;}
   if(busy){$('turnText').textContent=activeSeat>0?names[activeSeat].toUpperCase()+'’S TURN':'DEALING';$('turnHint').textContent='';btns.innerHTML='<button disabled class="subtle-button">Fold</button><button disabled>Check / call</button><button disabled class="raise-button">Raise</button>';return;}
   if(revealed&&eveningOver()){$('turnText').textContent='THE EVENING WINDS DOWN';$('turnHint').textContent=HearthClub.EVENING_HANDS+' hands played. Time to settle up.';btns.innerHTML='<button id="recapButton">Review hand</button><button id="endEvening" class="primary">Settle up <span>↗</span></button>';return;}
   if(revealed){var busted=table.players[0].stack===0;$('turnText').textContent=busted?'OUT OF CHIPS':'HAND COMPLETE';$('turnHint').textContent=busted?'Buy back in and the evening carries on.':'';btns.innerHTML='<button id="recapButton">Review hand</button>'+(busted?'<button id="freshTable" class="subtle-button">Fresh table</button><button id="nextHand" class="primary">Rebuy '+table.startingStack+' chips <span>↗</span></button>':'<button id="nextHand" class="primary">Deal next hand <span>↗</span></button>');return;}
@@ -221,7 +222,7 @@
  function closeAll(focus){var had=paused();disarmDiscard();$('journal').classList.add('hidden');['settings','rules','confirmReset','recap','eveningClose','shelf','online'].forEach(function(id){$(id).classList.add('hidden');});$('journalBackdrop').classList.add('hidden');syncScenePause();if(had)sound('guideClose');if(focus!==false&&lastFocus&&lastFocus.isConnected)lastFocus.focus();}
  function openModal(id){audio.init();lastFocus=document.activeElement;closeAll(false);$('journalBackdrop').classList.remove('hidden');$(id).classList.remove('hidden');syncScenePause();sound('guideOpen');var focus=$(id).querySelector('button,input,select');if(focus)focus.focus();}
  document.addEventListener('click',function(e){var b=e.target.closest('button');if(!b||b.disabled)return;var id=b.id;if(b.dataset.close){closeAll();return;}if(b.dataset.action){act(b.dataset.action);return;}if(b.dataset.buy){var bought=HearthClub.buy(club,b.dataset.buy);if(bought.ok){club=bought.state;saveClub();applyComforts();sound('chips');}renderShelf();return;}if(b.dataset.tab){guideTab=b.dataset.tab;selectedCategory=null;document.querySelectorAll('.journal-tabs button').forEach(function(x){x.classList.toggle('selected',x===b);});sound('click');renderJournal();return;}if(b.dataset.category!==undefined){renderDetail(Number(b.dataset.category));sound('click');$('journalDetail').scrollIntoView({block:'nearest',behavior:$('reducedMotion').checked?'auto':'smooth'});return;}if(b.dataset.raise){var l=table.legalActions(),min=Math.min(l.minRaiseTo,l.maxRaiseTo),v=b.dataset.raise==='min'?min:b.dataset.raise==='all'?l.maxRaiseTo:table.currentBet+Math.round((table.pot+l.call)*(b.dataset.raise==='half'?.5:1));v=Math.max(min,Math.min(l.maxRaiseTo,v));$('raiseRange').value=$('raiseNumber').value=v;sound('chips');return;}
-  if(id==='resumeGame')closeAll();else if(id==='settingsRules')openModal('rules');else if(id==='quitGame'||id==='windowQuit')quitGame();else if(id==='discardQuit'){if(discardArmed)discardAndQuit();else armDiscard(b);}else if(id==='recapButton'){renderRecap();openModal('recap');}else if(id==='startButton')start();else if(id==='onlineButton'){startOnlineFlow();}else if(id==='onlineCreateSubmit')onlineCreateRoom();else if(id==='onlineJoinSubmit')onlineJoinRoom();else if(id==='onlineStartSubmit')HearthOnline.start();else if(id==='onlineNextSubmit'){busy=true;render();HearthOnline.next();driveOnlineAfterAction(version);}else if(id==='onlineLeaveSubmit')onlineLeaveRoom();else if(id==='nextHand'||id==='recapNextHand'){if(busy||!revealed)return;if(eveningOver()){closeEvening();return;}closeAll(false);audio.init();if(table.players[0].stack===0)rebuy();else newHand();}else if(id==='endEvening'){if(busy||!revealed)return;closeEvening();}else if(id==='newEveningButton'){closeAll(false);audio.init();newEvening();}else if(id==='shelfButton'||id==='eveningShelf'){renderShelf();openModal('shelf');}else if(id==='freshTable'){if(busy||!revealed)return;closeAll(false);audio.init();reset();}else if(id==='guideButton'||id==='peekButton')openJournal();else if(id==='closeJournal')closeAll();else if(id==='soundButton'){syncSettings();openModal('settings');}else if(id==='tableSetup'){setupChoices();openModal('confirmReset');}else if(id==='rulesButton')openModal('rules');else if(id==='newTableButton'){setupChoices();openModal('confirmReset');}else if(id==='resetConfirm'){var selected=HearthRoster.selected();if(selected.length!==Number($('tableSize').value)-1)return;names=['You'].concat(selected);tableKind=HearthTables.find($('tableKind').value).id;chosenDifficulty=Poker.DIFFICULTIES.indexOf($('tableDifficulty').value)>=0?$('tableDifficulty').value:'standard';reset();}else if(id==='raiseToggle')raisePanel();else if(id==='raiseConfirm')confirmRaise();else if(id==='muteButton'){audio.toggleMute();syncSettings();saveSettings();}else if(id==='testSound'){audio.init();audio.play('chips',{intensity:1});}
+  if(id==='resumeGame')closeAll();else if(id==='settingsRules')openModal('rules');else if(id==='quitGame'||id==='windowQuit')quitGame();else if(id==='discardQuit'){if(discardArmed)discardAndQuit();else armDiscard(b);}else if(id==='recapButton'){renderRecap();openModal('recap');}else if(id==='startButton')start();else if(id==='onlineButton'){startOnlineFlow();}else if(id==='onlineRejoinButton'){onlineRejoinRoom();}else if(id==='onlineCreateSubmit')onlineCreateRoom();else if(id==='onlineJoinSubmit')onlineJoinRoom();else if(id==='onlineStartSubmit')HearthOnline.start();else if(id==='onlineNextSubmit'){busy=true;render();HearthOnline.next();driveOnlineAfterAction(version);}else if(id==='onlineLeaveSubmit')onlineLeaveRoom();else if(id==='nextHand'||id==='recapNextHand'){if(busy||!revealed)return;if(eveningOver()){closeEvening();return;}closeAll(false);audio.init();if(table.players[0].stack===0)rebuy();else newHand();}else if(id==='endEvening'){if(busy||!revealed)return;closeEvening();}else if(id==='newEveningButton'){closeAll(false);audio.init();newEvening();}else if(id==='shelfButton'||id==='eveningShelf'){renderShelf();openModal('shelf');}else if(id==='freshTable'){if(busy||!revealed)return;closeAll(false);audio.init();reset();}else if(id==='guideButton'||id==='peekButton')openJournal();else if(id==='closeJournal')closeAll();else if(id==='soundButton'){syncSettings();openModal('settings');}else if(id==='tableSetup'){setupChoices();openModal('confirmReset');}else if(id==='rulesButton')openModal('rules');else if(id==='newTableButton'){setupChoices();openModal('confirmReset');}else if(id==='resetConfirm'){var selected=HearthRoster.selected();if(selected.length!==Number($('tableSize').value)-1)return;names=['You'].concat(selected);tableKind=HearthTables.find($('tableKind').value).id;chosenDifficulty=Poker.DIFFICULTIES.indexOf($('tableDifficulty').value)>=0?$('tableDifficulty').value:'standard';reset();}else if(id==='raiseToggle')raisePanel();else if(id==='raiseConfirm')confirmRaise();else if(id==='muteButton'){audio.toggleMute();syncSettings();saveSettings();}else if(id==='testSound'){audio.init();audio.play('chips',{intensity:1});}
  });
  $('gamePace').addEventListener('change',function(){pace=this.value;$('stage').style.setProperty('--pace',HearthSession.paceFactor(pace));saveSettings();});
  $('journalBackdrop').addEventListener('click',function(){closeAll();});
@@ -269,13 +270,24 @@
   * Deliberately out of scope here (see the project's plan): the club fund
   * and 12-hand "evening" never apply online - eveningHands simply never
   * moves in this file for an online table, so eveningOver() stays false and
-  * the existing single-player settle-up screen never appears. Reconnect
-  * UI, a turn-clock countdown, and text/voice chat are not built yet either.
+  * the existing single-player settle-up screen never appears. A visible
+  * turn-clock countdown and text/voice chat are not built yet either.
   */
  function onlineSavedName(){try{return localStorage.getItem('hearthside-online-name')||'';}catch(e){return '';}}
  function onlineSaveName(name){try{localStorage.setItem('hearthside-online-name',name);}catch(e){}}
  function onlineSavedAvatar(){try{return localStorage.getItem('hearthside-online-avatar')||'';}catch(e){return '';}}
  function onlineSaveAvatar(avatar){try{localStorage.setItem('hearthside-online-avatar',avatar);}catch(e){}}
+ // Lets a full page reload (a phone backgrounding Safari long enough that it
+ // discards the tab, an accidental refresh) come back to the same seat
+ // instead of losing it outright - the seat's own token is all hello()'s
+ // reconnect path needs. Saved fresh on every successful welcome (a first
+ // join AND every automatic reconnect alike), so the 10-minute expiry below
+ // tracks time since last real contact with the room, not time since it was
+ // first joined. A stale/expired entry just fails harmlessly (see the
+ // 'error' handler) rather than needing to be proactively cleaned up here.
+ function onlineSavedSession(){try{var s=JSON.parse(localStorage.getItem('hearthside-online-session')||'null');if(!s||!s.room||!s.token||Date.now()-(s.savedAt||0)>10*60*1000)return null;return s;}catch(e){return null;}}
+ function onlineSaveSession(room,token){try{localStorage.setItem('hearthside-online-session',JSON.stringify({room:room,token:token,savedAt:Date.now()}));}catch(e){}}
+ function onlineClearSession(){try{localStorage.removeItem('hearthside-online-session');}catch(e){}}
  function onlineErrorText(code){return {'no-such-room':'That room doesn’t exist. Check the code and try again.','room-full':'That room is already full.','room-already-started':'That room has already started without you.','already-created':'That code is already taken — try Create again for a new one.','connection-failed':'Couldn’t reach the room server. It may not be set up yet — see worker/README.md.'}[code]||'Something went wrong. Please try again.';}
  function renderOnlineEntry(errorText){
   var body=$('onlineBody');body.innerHTML='<label>Your name<input id="onlineName" maxlength="12" placeholder="Your name"></label>'+
@@ -320,9 +332,20 @@
   onlineRoomCode=code;
   HearthOnline.connect({room:code,name:name,avatar:avatar});
  }
+ // Offered on the main screen instead of "Play with friends" whenever a
+ // recent session is saved - one click straight back to the same seat via
+ // the token hello() already knows how to resume, no name/avatar re-entry.
+ function onlineRejoinRoom(){
+  var saved=onlineSavedSession();if(!saved)return;
+  onlineRoomCode=saved.room;onlineRejoining=true;
+  closeAll(false);openModal('online');
+  $('onlineBody').innerHTML='<p class="pace-note">Rejoining room '+HearthRoomCode.display(saved.room)+'…</p>';
+  HearthOnline.connect({room:saved.room,token:saved.token});
+ }
  function onlineLeaveRoom(){
   HearthOnline.leave();HearthOnline.disconnect();
   online=false;started=false;joining=false;busy=false;activeSeat=null;version++;
+  onlineClearSession();
   // table/names must not be left pointing at the online room: if no saved
   // single-player hand exists, the next "Take a seat" click calls newHand()
   // directly on whatever table/names currently are, with no reconstruction
@@ -387,29 +410,48 @@
    if(t===version&&online){busy=false;activeSeat=null;setMessage('Something went wrong catching up on the table. Try your action again, or leave and rejoin the room.');renderActions();}
   }
  }
- HearthOnline.on('lobby',function(msg){if(!online)renderOnlineLobby(msg);else if(reconnecting){reconnecting=false;reconnectAttempts=0;}});
+ // Every successful welcome - a first join or any later automatic reconnect
+ // alike - refreshes the saved session, so onlineRejoinRoom() above always
+ // has an up-to-date token to come back to (and its 10-minute expiry tracks
+ // time since we were last actually in the room, not time since we joined).
+ HearthOnline.on('welcome',function(msg){onlineSaveSession(onlineRoomCode,msg.token);});
+ HearthOnline.on('lobby',function(msg){if(!online){onlineRejoining=false;renderOnlineLobby(msg);}else if(reconnecting){reconnecting=false;reconnectAttempts=0;}});
  // Once already online, driveOnline()'s own waitForEvents(t) call is what
  // wakes back up to consume a new push - nothing else needs to react here,
  // except right after a reconnect: that loop already returned (its wait was
  // cancelled when the old socket closed), so it has to be restarted here.
- HearthOnline.on('events',function(){if(!online)beginOnlinePlay();else if(reconnecting){reconnecting=false;reconnectAttempts=0;beginOnlinePlay();}});
+ HearthOnline.on('events',function(){if(!online){onlineRejoining=false;beginOnlinePlay();}else if(reconnecting){reconnecting=false;reconnectAttempts=0;beginOnlinePlay();}});
  // A rejected action (a stale click, a timing race) must not leave the table
  // stuck mid-"waiting" forever - fall back to whatever the table already
  // knows, which is still correct since nothing here invalidated it.
  HearthOnline.on('error',function(msg){
-  if(!online){renderOnlineEntry(onlineErrorText(msg.error));return;}
-  if(msg.error==='connection-failed')return; // the close handler below owns reconnect messaging
+  if(!online){
+   // A saved session that no longer resolves (the room expired, the token
+   // was never valid) would otherwise keep offering a "Rejoin" that can
+   // only ever fail again the same way.
+   if(onlineRejoining){onlineRejoining=false;onlineClearSession();}
+   renderOnlineEntry(onlineErrorText(msg.error));return;
+  }
+  if(msg.error==='connection-failed')return; // attemptReconnect() below owns reconnect messaging
   busy=false;activeSeat=table.result?null:table.actor;setMessage(onlineErrorText(msg.error));renderActions();
  });
  // A dropped connection (a phone locking, a network blip) gets a few quiet
  // reconnect attempts - using the seat's own token, so it resumes the same
- // seat - before giving up and telling the player outright.
- HearthOnline.on('close',function(){
+ // seat - before giving up and telling the player outright. Triggered both
+ // by the socket actually closing, and (below) by the tab becoming visible
+ // again to a socket that silently died while hidden without ever firing a
+ // close event at all - common on mobile, where the OS can freeze a
+ // background tab's networking without the page ever finding out.
+ function attemptReconnect(){
   if(!online)return;
   if(reconnectAttempts>=5){online=false;reconnecting=false;setMessage('The connection to the room was lost.');renderActions();return;}
   reconnecting=true;reconnectAttempts++;busy=true;
   setMessage('Reconnecting'+'.'.repeat(Math.min(reconnectAttempts,3))+'…');renderActions();
   setTimeout(function(){if(online)HearthOnline.reconnect();},Math.min(1000*reconnectAttempts,4000));
+ }
+ HearthOnline.on('close',attemptReconnect);
+ document.addEventListener('visibilitychange',function(){
+  if(document.visibilityState==='visible'&&online&&!reconnecting&&(!HearthOnline.ws||HearthOnline.ws.readyState!==WebSocket.OPEN)){reconnectAttempts=0;attemptReconnect();}
  });
 
  window.hearth={table:table,audio:audio,companions:companions,cat:cat,ambience:ambience,computation:computation,saveSession:saveSession,openJournal:openJournal,closeAll:closeAll,getState:function(){return {started:started,joining:joining,activeSeat:activeSeat,busy:busy,paused:paused(),visibleBoard:visibleBoard.map(function(c){return Object.assign({},c);}),revealed:revealed,visiblePot:visiblePot,visibleSeats:visibleSeats.map(function(p){return Object.assign({},p);}),companionSpeech:companions.getState()};}};
