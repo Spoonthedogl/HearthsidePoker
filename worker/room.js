@@ -290,7 +290,14 @@
     this.handsPlayed++;
     var blinds = HearthTables.blinds(this.tableKind, this.handsPlayed);
     this.table.smallBlind = blinds.small; this.table.bigBlind = blinds.big;
-    this.table.newHand(); // clears table.events - the new hand's log starts at index 0
+    // Online has no buy-in economy to fall back on the way single-player's
+    // own newHand() does (it rebuys a busted seat before ever calling this) -
+    // if fewer than two seats still hold chips, newHand() correctly refuses
+    // and sets table.gameOver, but previously that refusal went completely
+    // unhandled here: the same already-shown hand got silently rebroadcast
+    // and readySeats cleared again, so "Ready for the next hand" looked
+    // clickable forever without anything ever actually happening.
+    if (!this.table.newHand()) return this._broadcastFrom(this.table.events.length);
     driveAI(this.table);
     this._armTurnClock(now);
     return this._broadcastFrom(0);
@@ -300,6 +307,7 @@
     var seat = this._seatFor(token);
     if (seat === null) return {ok: false, error: 'unknown-token'};
     if (this.phase !== 'playing' || !this.table.result) return {ok: false, error: 'hand-in-progress'};
+    if (this.table.gameOver) return {ok: false, error: 'game-over'};
     this.readySeats.add(seat);
     return {ok: true, out: this._maybeDealNext(now)};
   };

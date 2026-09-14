@@ -235,6 +235,37 @@ test('blinds still progress hand over hand by the chosen table schedule', () => 
   assert.deepEqual({small: room.table.smallBlind, big: room.table.bigBlind}, {small: 10, big: 20});
 });
 
+// Online has no buy-in economy to fall back on (unlike single-player's own
+// automatic rebuy) - if a hand leaves fewer than two seats with any chips,
+// there is no next hand to deal, ever, for this room.
+test('a hand that leaves fewer than two seats with chips reports game over, not a silent stuck loop', () => {
+  const room = new Room({random: seeded(20)});
+  const owner = room.create('Alice', {seatCount: 2}, 0);
+  const bob = room.hello(null, 'Bob', 0);
+  room.start(owner.token, 0);
+  while (!room.table.result) {
+    const actor = room.table.actor;
+    const token = actor === 0 ? owner.token : bob.token;
+    const legal = room.table.legalActions(actor);
+    const action = legal.canRaise ? 'allin' : legal.check ? 'check' : 'call';
+    room.act(token, {handNumber: room.table.handNumber, action}, 0);
+  }
+  const funded = room.table.players.filter((p) => p.stack > 0).length;
+  assert(funded < 2, 'test setup: the shove/call line must leave fewer than two seats funded');
+  const beforeHandNumber = room.table.handNumber;
+
+  room.next(owner.token, 0);
+  room.next(bob.token, 0);
+  assert.equal(room.table.gameOver, true, 'newHand() refusing to deal must actually be reflected on the table');
+  assert.equal(room.table.handNumber, beforeHandNumber, 'a hand that cannot be dealt must not silently pretend to be a new one');
+
+  // Clicking "ready" again - exactly what a stuck player would do - must not
+  // keep silently succeeding and resending the same stale hand forever.
+  const again = room.next(owner.token, 0);
+  assert.equal(again.ok, false);
+  assert.equal(again.error, 'game-over');
+});
+
 // The highest-value test: script full sessions with a mix of human and AI
 // seats, capture every single outbound payload addressed to every human
 // seat, and assert that no payload ever contains a card key that seat is

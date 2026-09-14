@@ -123,6 +123,11 @@
   if(online){
    if(!HearthOnline.started){$('turnText').textContent='IN THE LOBBY';$('turnHint').textContent='';btns.innerHTML='<button disabled class="primary">Waiting to begin…</button>';return;}
    if(busy){$('turnText').textContent='WAITING';$('turnHint').textContent='';btns.innerHTML='<button disabled class="subtle-button">Fold</button><button disabled>Check / call</button><button disabled class="raise-button">Raise</button>';return;}
+   // Online never rebuys a busted seat (there's no buy-in economy to draw
+   // from), so once a hand leaves fewer than two seats with any chips,
+   // table.gameOver is the table's own permanent answer - there is no next
+   // hand to ready up for, ever, for this room.
+   if(table.gameOver){$('turnText').textContent='TABLE CLOSED';$('turnHint').textContent='Not enough players still have chips to continue.';btns.innerHTML='<button id="onlineLeaveSubmit" class="primary">Leave the room</button>';return;}
    if(table.result){$('turnText').textContent='HAND COMPLETE';$('turnHint').textContent='';btns.innerHTML='<button id="onlineNextSubmit" class="primary">Ready for the next hand <span>↗</span></button>';return;}
    if(table.actor!==0){$('turnText').textContent='WAITING';$('turnHint').textContent=(table.names[table.actor]||'Someone')+' is deciding.';btns.innerHTML='<button disabled>Cards in motion…</button>';return;}
    var ol=table.legalActions();$('turnText').textContent='YOUR TURN';$('turnHint').textContent=ol.check?'':ol.call+' chips to call';
@@ -288,7 +293,7 @@
  function onlineSavedSession(){try{var s=JSON.parse(localStorage.getItem('hearthside-online-session')||'null');if(!s||!s.room||!s.token||Date.now()-(s.savedAt||0)>10*60*1000)return null;return s;}catch(e){return null;}}
  function onlineSaveSession(room,token){try{localStorage.setItem('hearthside-online-session',JSON.stringify({room:room,token:token,savedAt:Date.now()}));}catch(e){}}
  function onlineClearSession(){try{localStorage.removeItem('hearthside-online-session');}catch(e){}}
- function onlineErrorText(code){return {'no-such-room':'That room doesn’t exist. Check the code and try again.','room-full':'That room is already full.','room-already-started':'That room has already started without you.','already-created':'That code is already taken — try Create again for a new one.','connection-failed':'Couldn’t reach the room server. It may not be set up yet — see worker/README.md.'}[code]||'Something went wrong. Please try again.';}
+ function onlineErrorText(code){return {'no-such-room':'That room doesn’t exist. Check the code and try again.','room-full':'That room is already full.','room-already-started':'That room has already started without you.','already-created':'That code is already taken — try Create again for a new one.','connection-failed':'Couldn’t reach the room server. It may not be set up yet — see worker/README.md.','game-over':'Not enough players still have chips to continue.'}[code]||'Something went wrong. Please try again.';}
  function renderOnlineEntry(errorText){
   var body=$('onlineBody');body.innerHTML='<label>Your name<input id="onlineName" maxlength="12" placeholder="Your name"></label>'+
    '<label>Play as<select id="onlineAvatar"></select></label>'+
