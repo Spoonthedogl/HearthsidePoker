@@ -1,5 +1,29 @@
 # Changelog
 
+## v1.6.1 — 2026-09-14
+
+Online play fixes, from the first real sessions with friends.
+
+**Save compatibility:** unaffected.
+
+### Fixed
+
+- **A dropped connection or a rejected action no longer strands you.**
+  Online play now quietly reconnects to your same seat after a phone
+  locking or a brief network blip, and a rejected action (a stale click,
+  a timing race) unsticks the table instead of leaving it waiting
+  forever.
+- **Other players' names now show correctly above their character**,
+  instead of showing the name of whichever companion's sprite they
+  happened to borrow.
+- **Confirming a raise on a phone no longer flashes "Turn your phone
+  upright."** The on-screen keyboard was being mistaken for a rotation.
+
+### Added
+
+- **Choose which companion's look represents you** when creating or
+  joining an online room. Names are capped at 12 characters.
+
 ## v1.6.0 — 2026-09-14
 
 Play with friends: a private table, joined by a short code.
