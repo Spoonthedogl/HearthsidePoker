@@ -1,5 +1,17 @@
 # Changelog
 
+## v1.5.3 — 2026-09-14
+
+**Save compatibility:** unaffected.
+
+### Fixed
+
+- **The windowsill cat sleeps on top of the blanket.** v1.5.2 sat it a little too
+  low, on the blanket's front overhang; it now rests on the flat top of the
+  cushion, where a cat would actually curl up.
+
+---
+
 ## v1.5.2 — 2026-09-14
 
 Small follow-ups to v1.5.1: the cat actually sits down, and web updates reach
