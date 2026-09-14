@@ -87,8 +87,8 @@
     this.ws.addEventListener('open', function () {
       var create = !!options.create;
       self.ws.send(JSON.stringify(create
-        ? {t: 'create', name: options.name, cfg: options.cfg}
-        : {t: 'hello', name: options.name, token: options.token}));
+        ? {t: 'create', name: options.name, cfg: options.cfg, avatar: options.avatar}
+        : {t: 'hello', name: options.name, token: options.token, avatar: options.avatar}));
     });
     this.ws.addEventListener('message', function (event) { self._onMessage(event.data); });
     this.ws.addEventListener('close', function () { self._settleAll(false); self._emit('close'); });

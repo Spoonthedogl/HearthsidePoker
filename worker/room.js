@@ -46,8 +46,17 @@
   ];
 
   function sanitizeName(name) {
-    name = (typeof name === 'string' ? name : '').replace(/[\x00-\x1f\x7f]/g, '').trim().slice(0, 24);
+    name = (typeof name === 'string' ? name : '').replace(/[\x00-\x1f\x7f]/g, '').trim().slice(0, 12);
     return name || 'Guest';
+  }
+
+  // A human seat's chosen sprite - one of the same six companions single-
+  // player already draws. Any value that isn't one of them (missing, typo'd,
+  // an older client) is simply left unset, so the client's own by-name/index
+  // fallback in roster.js picks something instead of trusting free-form input.
+  var VALID_AVATARS = FALLBACK_COMPANIONS.map(function (c) { return c.avatar; });
+  function sanitizeAvatar(avatar) {
+    return VALID_AVATARS.indexOf(avatar) >= 0 ? avatar : null;
   }
 
   function sanitizeConfig(cfg, fallback) {
@@ -124,14 +133,16 @@
   };
 
   // The one place a snapshot is stitched with room-level (not poker.js-level)
-  // display info - who's connected, and an AI seat's companion avatar - after
-  // HearthRoomView has already done the only part that matters for privacy.
+  // display info - who's connected, and which companion sprite draws this
+  // seat (an AI seat's assigned fallback, or a human seat's own chosen
+  // avatar, if any) - after HearthRoomView has already done the only part
+  // that matters for privacy.
   Room.prototype._decorate = function (snapshot, viewerSeat) {
     var self = this;
     snapshot.players.forEach(function (p, local) {
       var server = viewerSeat === null || viewerSeat === undefined ? local : (local + viewerSeat) % self.seatCount;
       var seat = self.seats[server];
-      p.avatar = seat ? null : self.seatAvatar[server];
+      p.avatar = seat ? (seat.avatar || null) : self.seatAvatar[server];
       p.connected = seat ? !!seat.connected : true;
     });
     return snapshot;
@@ -182,13 +193,13 @@
 
   // First message ever sent to a brand-new room: config comes from whoever
   // creates it, and they take seat 0.
-  Room.prototype.create = function (name, cfg, now) {
+  Room.prototype.create = function (name, cfg, now, avatar) {
     if (this.phase !== 'new') return {ok: false, error: 'already-created'};
     var conf = sanitizeConfig(cfg, {seatCount: 4});
     this.seatCount = conf.seatCount; this.tableKind = conf.tableKind; this.difficulty = conf.difficulty;
     this.seats = new Array(this.seatCount).fill(null);
     var token = randomToken(this.random);
-    this.seats[0] = {token: token, name: sanitizeName(name), connected: true};
+    this.seats[0] = {token: token, name: sanitizeName(name), connected: true, avatar: sanitizeAvatar(avatar)};
     this.tokenSeat.set(token, 0);
     this.ownerToken = token;
     this.phase = 'lobby';
@@ -198,7 +209,7 @@
 
   // A later hello: either a brand-new join (no token yet) or a reconnect
   // (token matches a seat this room already knows).
-  Room.prototype.hello = function (token, name, now) {
+  Room.prototype.hello = function (token, name, now, avatar) {
     if (this.phase === 'new') return {ok: false, error: 'no-such-room'};
     if (token && this.tokenSeat.has(token)) {
       var seat = this._seatFor(token);
@@ -212,7 +223,7 @@
     var free = this.seats.indexOf(null);
     if (free < 0) return {ok: false, error: 'room-full'};
     var newToken = randomToken(this.random);
-    this.seats[free] = {token: newToken, name: sanitizeName(name), connected: true};
+    this.seats[free] = {token: newToken, name: sanitizeName(name), connected: true, avatar: sanitizeAvatar(avatar)};
     this.tokenSeat.set(newToken, free);
     this._assignCompanions();
     var joinOut = this._broadcastLobby(free);
@@ -345,7 +356,7 @@
   Room.prototype.serialize = function () {
     return {
       phase: this.phase, seatCount: this.seatCount, tableKind: this.tableKind, difficulty: this.difficulty,
-      seats: this.seats.map(function (s) { return s ? {token: s.token, name: s.name} : null; }),
+      seats: this.seats.map(function (s) { return s ? {token: s.token, name: s.name, avatar: s.avatar} : null; }),
       seatAvatar: this.seatAvatar, ownerToken: this.ownerToken, handsPlayed: this.handsPlayed,
       tablePack: this.table ? HearthSession.pack(this.table, fullyCaughtUpUI(this.table)) : null
     };
@@ -356,7 +367,7 @@
     room.phase = data.phase; room.seatCount = data.seatCount; room.tableKind = data.tableKind; room.difficulty = data.difficulty;
     // Every seat starts marked disconnected: a fresh process has no sockets
     // yet, and each seat's own next hello() will mark it connected again.
-    room.seats = data.seats.map(function (s) { return s ? {token: s.token, name: s.name, connected: false} : null; });
+    room.seats = data.seats.map(function (s) { return s ? {token: s.token, name: s.name, connected: false, avatar: s.avatar || null} : null; });
     room.seatAvatar = data.seatAvatar; room.ownerToken = data.ownerToken; room.handsPlayed = data.handsPlayed;
     room.seats.forEach(function (s, i) { if (s) room.tokenSeat.set(s.token, i); });
     if (data.tablePack) {

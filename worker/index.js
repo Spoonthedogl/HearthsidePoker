@@ -82,8 +82,8 @@ export class Room {
 
     var now = Date.now(), room = this.game, result;
     switch (msg.t) {
-      case 'create': result = room.create(msg.name, msg.cfg, now); break;
-      case 'hello': result = room.exists() ? room.hello(msg.token, msg.name, now) : {ok: false, error: 'no-such-room'}; break;
+      case 'create': result = room.create(msg.name, msg.cfg, now, msg.avatar); break;
+      case 'hello': result = room.exists() ? room.hello(msg.token, msg.name, now, msg.avatar) : {ok: false, error: 'no-such-room'}; break;
       case 'configure': result = room.configure(msg.token, msg.cfg, now); break;
       case 'start': result = room.start(msg.token, now); break;
       case 'act': result = room.act(msg.token, msg, now); break;
