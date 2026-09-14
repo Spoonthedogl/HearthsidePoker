@@ -51,6 +51,28 @@ test('hello joins the next free seat, or reconnects an existing token to its own
   assert.equal(room4.ok, false); assert.equal(room4.error, 'room-full');
 });
 
+test('a valid chosen avatar is reported for a human seat; an unknown one is dropped, not trusted verbatim', () => {
+  const room = new Room({random: seeded(2.5)});
+  const owner = room.create('Alice', {seatCount: 3}, 0, 'clipper');
+  const bob = room.hello(null, 'Bob', 0, 'not-a-real-companion');
+  const carol = room.hello(null, 'Carol', 0); // no avatar chosen at all
+  const started = room.start(owner.token, 0);
+  const view = outFor(started, 0)[0]; // Alice's own view: seats 1/2 are Bob/Carol, locally 1/2
+  assert.equal(view.snapshot.players[1].avatar, null, 'an invalid avatar must not reach the client as-is');
+  assert.equal(view.snapshot.players[2].avatar, null, 'no chosen avatar is also reported as null, not a made-up one');
+  const bobView = outFor(started, 1)[0]; // Bob is viewer 1: Alice (server seat 0) is local seat 2 for him
+  assert.equal(bobView.snapshot.players[2].avatar, 'clipper', 'a valid chosen avatar is reported to every other seat too');
+});
+
+test('a room name is capped at 12 characters, matching the client-side limit', () => {
+  const room = new Room({random: seeded(2.6)});
+  const owner = room.create('A Rather Long Name Indeed', {seatCount: 2}, 0);
+  assert.equal(owner.ok, true);
+  const lobby = room._lobbyMessage();
+  assert.equal(lobby.seats[0].name.length <= 12, true);
+  assert.equal(lobby.seats[0].name, 'A Rather Lon');
+});
+
 test('hello refuses a brand-new join once the room has started', () => {
   const room = new Room({random: seeded(3)});
   const owner = room.create('Alice', {seatCount: 2}, 0);
