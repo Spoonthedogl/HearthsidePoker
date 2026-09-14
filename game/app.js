@@ -173,8 +173,8 @@
   var list=document.createElement('ol');list.className='log-list';
   seen.forEach(function(e){var li=document.createElement('li');
    if(e.type==='hand-start')li.className='log-street',li.textContent=e.dealer===0?'You deal':names[e.dealer]+' deals';
-   else if(e.type==='blind')li.innerHTML='<b>'+names[e.playerId]+'</b> posts the '+e.label.toLowerCase()+' · '+e.amount;
-   else if(e.type==='action')li.innerHTML='<b>'+names[e.playerId]+'</b> · '+e.text;
+   else if(e.type==='blind'){var nb=document.createElement('b');nb.textContent=names[e.playerId];li.appendChild(nb);li.appendChild(document.createTextNode(' posts the '+e.label.toLowerCase()+' · '+e.amount));}
+   else if(e.type==='action'){var nb=document.createElement('b');nb.textContent=names[e.playerId];li.appendChild(nb);li.appendChild(document.createTextNode(' · '+e.text));}
    else if(e.type==='street'){li.className='log-street';li.textContent=e.street.toUpperCase();li.appendChild(miniCards(e.cards));}
    else if(e.type==='result')li.className='log-result',li.textContent=HearthPresentation.resultLabel(e.result,names);
    else return;
