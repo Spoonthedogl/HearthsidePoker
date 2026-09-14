@@ -266,9 +266,12 @@
   */
  function onlineSavedName(){try{return localStorage.getItem('hearthside-online-name')||'';}catch(e){return '';}}
  function onlineSaveName(name){try{localStorage.setItem('hearthside-online-name',name);}catch(e){}}
+ function onlineSavedAvatar(){try{return localStorage.getItem('hearthside-online-avatar')||'';}catch(e){return '';}}
+ function onlineSaveAvatar(avatar){try{localStorage.setItem('hearthside-online-avatar',avatar);}catch(e){}}
  function onlineErrorText(code){return {'no-such-room':'That room doesn’t exist. Check the code and try again.','room-full':'That room is already full.','room-already-started':'That room has already started without you.','already-created':'That code is already taken — try Create again for a new one.','connection-failed':'Couldn’t reach the room server. It may not be set up yet — see worker/README.md.'}[code]||'Something went wrong. Please try again.';}
  function renderOnlineEntry(errorText){
-  var body=$('onlineBody');body.innerHTML='<label>Your name<input id="onlineName" maxlength="24" placeholder="Your name"></label>'+
+  var body=$('onlineBody');body.innerHTML='<label>Your name<input id="onlineName" maxlength="12" placeholder="Your name"></label>'+
+   '<label>Play as<select id="onlineAvatar"></select></label>'+
    '<h3>Create a private room</h3><label>Players<select id="onlineSeatCount"><option value="2">2 players</option><option value="3">3 players</option><option value="4" selected>4 players</option><option value="5">5 players</option><option value="6">6 players</option><option value="7">7 players</option></select></label>'+
    '<label>Companions<select id="onlineDifficulty"><option value="gentle">Gentle</option><option value="standard" selected>Standard</option><option value="sharp">Sharp</option></select></label>'+
    '<label>The evening<select id="onlineTableKind"></select></label>'+
@@ -277,6 +280,8 @@
    '<div class="settings-row"><button id="onlineJoinSubmit" class="primary">Join</button></div>'+
    '<p id="onlineError" class="pace-note"></p>';
   var kind=$('onlineTableKind');HearthTables.tables.forEach(function(t){var o=document.createElement('option');o.value=t.id;o.textContent=t.name;kind.appendChild(o);});
+  var avatar=$('onlineAvatar');HearthRoster.all.forEach(function(c){var o=document.createElement('option');o.value=c.asset;o.textContent=c.name+', '+c.animal;avatar.appendChild(o);});
+  avatar.value=onlineSavedAvatar()||HearthRoster.all[0].asset;
   $('onlineName').value=onlineSavedName();
   if(errorText)$('onlineError').textContent=errorText;
  }
@@ -294,16 +299,18 @@
  }
  function startOnlineFlow(){closeAll(false);openModal('online');renderOnlineEntry();}
  function onlineCreateRoom(){
-  var name=($('onlineName').value||'').trim()||'Guest';onlineSaveName(name);
+  var name=($('onlineName').value||'').trim().slice(0,12)||'Guest';onlineSaveName(name);
+  var avatar=$('onlineAvatar').value;onlineSaveAvatar(avatar);
   onlineRoomCode=HearthRoomCode.generate();
-  HearthOnline.connect({room:onlineRoomCode,name:name,create:true,cfg:{seatCount:Number($('onlineSeatCount').value),difficulty:$('onlineDifficulty').value,tableKind:$('onlineTableKind').value}});
+  HearthOnline.connect({room:onlineRoomCode,name:name,avatar:avatar,create:true,cfg:{seatCount:Number($('onlineSeatCount').value),difficulty:$('onlineDifficulty').value,tableKind:$('onlineTableKind').value}});
  }
  function onlineJoinRoom(){
-  var name=($('onlineName').value||'').trim()||'Guest';onlineSaveName(name);
+  var name=($('onlineName').value||'').trim().slice(0,12)||'Guest';onlineSaveName(name);
+  var avatar=$('onlineAvatar').value;onlineSaveAvatar(avatar);
   var code=HearthRoomCode.normalize($('onlineCode').value);
   if(!code){renderOnlineEntry('That doesn’t look like a room code.');return;}
   onlineRoomCode=code;
-  HearthOnline.connect({room:code,name:name});
+  HearthOnline.connect({room:code,name:name,avatar:avatar});
  }
  function onlineLeaveRoom(){
   HearthOnline.leave();HearthOnline.disconnect();

@@ -89,8 +89,8 @@
     ws.addEventListener('open', function () {
       var create = !!options.create;
       ws.send(JSON.stringify(create
-        ? {t: 'create', name: options.name, cfg: options.cfg}
-        : {t: 'hello', name: options.name, token: options.token}));
+        ? {t: 'create', name: options.name, cfg: options.cfg, avatar: options.avatar}
+        : {t: 'hello', name: options.name, token: options.token, avatar: options.avatar}));
     });
     ws.addEventListener('message', function (event) { self._onMessage(event.data); });
     // self.ws !== ws once disconnect()/a fresh connect() has already moved on -
