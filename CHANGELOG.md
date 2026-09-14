@@ -1,5 +1,19 @@
 # Changelog
 
+## v1.5.4 — 2026-09-14
+
+**Save compatibility:** unaffected.
+
+### Fixed
+
+- **Card suits render as crisp text on every phone.** On some devices (Samsung
+  among them) a card's ♣ was drawn from the colour-emoji font — pinched, and
+  ignoring the card's own colour. Every suit now uses the plain text glyph, so
+  clubs look right, and hearts and diamonds take the deck's muted red (and the
+  four-colour deck's blue/green) instead of a bright emoji red.
+
+---
+
 ## v1.5.3 — 2026-09-14
 
 **Save compatibility:** unaffected.
