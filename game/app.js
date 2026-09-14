@@ -10,6 +10,7 @@
  var table=new Poker.Table({names:names}),started=false,busy=false,version=0,eventIndex=0;
  var online=false,onlineRoomCode=null; // true only inside an active online room; see the Online play block near the end of this file.
  var reconnecting=false,reconnectAttempts=0; // a dropped socket gets a few quiet retries before online play gives up; see the Online play block.
+ var onlineHandNumber=0; // which hand driveOnline's local replay state (eventIndex, visibleSeats, ...) is caught up to; see the Online play block.
  var visibleSeats=table.players.map(function(p){return {stack:p.stack,bet:0,folded:false,allIn:false,lastAction:''};});
  var companions=new HearthCompanions({onChange:renderSpeech});
  var computation=new HearthComputation(),guidePending={},guideErrors={};
@@ -109,7 +110,7 @@
   $('sessionRecord').textContent=record.wins+'W · '+record.losses+'L · '+(record.net>=0?'+':'')+record.net+' chips';
   for(var pos=0;pos<table.players.length;pos++){var host=pos===0?$('humanPositions'):$('seat'+pos).querySelector('.position-markers');if(!host){host=document.createElement('div');host.className='position-markers';$('seat'+pos).querySelector('.nameplate').appendChild(host);}var positionSig=started?table.handNumber+'|'+table.dealer+'|'+table.events.slice(0,eventIndex+1).filter(function(e){return e.type==='blind'&&e.playerId===pos;}).map(function(e){return e.label;}).join(','):'idle';if(host.dataset.sig===positionSig)continue;host.dataset.sig=positionSig;host.innerHTML='';if(started){if(pos===table.dealer){var d=document.createElement('span');d.textContent='D';d.title='Dealer';d.className='dealer-marker';host.appendChild(d);}table.events.slice(0,eventIndex+1).filter(function(e){return e.type==='blind'&&e.playerId===pos;}).forEach(function(e){var m=document.createElement('span');m.textContent=e.label==='Small blind'?'SB':'BB';m.title=e.label+' · '+e.amount+' chips';m.className='blind-marker';host.appendChild(m);});}}
  $('humanBet').textContent=started?(visibleSeats[0].folded?'Sitting this hand out.':visibleSeats[0].allIn?'All in.':visibleSeats[0].bet?'In this round: '+visibleSeats[0].bet+' chips':''):'';
-  $('humanDealer').style.display=started&&table.dealer===0?'block':'none';$('currentHand').textContent=started?(visibleBoard.length<3?(ev.category===1&&table.players[0].hole.length?'Pocket '+(rank[table.players[0].hole[0].rank]||table.players[0].hole[0].rank)+'s':(rank[ev.tiebreak[0]]||ev.tiebreak[0])+' high'):ev.name):'No cards';
+  $('humanDealer').style.display=started&&table.dealer===0?'block':'none';$('currentHand').textContent=started?(table.players[0].hole.length===0?'Sitting out':visibleBoard.length<3?(ev.category===1?'Pocket '+(rank[table.players[0].hole[0].rank]||table.players[0].hole[0].rank)+'s':(rank[ev.tiebreak[0]]||ev.tiebreak[0])+' high'):ev.name):'No cards';
   var boardPair=visibleBoard.filter(function(c){return c.rank===ev.tiebreak[0];}).length>=2;
   $('handSource').textContent=started&&visibleBoard.length>=3&&ev.category===1?(boardPair?'Pair on the board · shared by everyone':'Pair uses your cards'):'';
   $('peekButton').title='Best five cards from your hand and the shared board';
@@ -336,7 +337,7 @@
   configureSeats();window.hearth.table=table;
   $('stage').classList.add('seated');started=true;joining=false;busy=false;activeSeat=null;
   closeAll(false);
-  eventIndex=0;visibleSeats=table.players.map(function(p){return {stack:p.stack,bet:0,folded:false,allIn:false,lastAction:''};});visibleBoard=[];visiblePot=0;visibleStreet='preflop';revealed=false;
+  onlineHandNumber=table.handNumber;eventIndex=0;visibleSeats=table.players.map(function(p){return {stack:p.stack,bet:0,folded:false,allIn:false,lastAction:''};});visibleBoard=[];visiblePot=0;visibleStreet='preflop';revealed=false;
   driveOnline(version);
  }
  // The online equivalent of drive(): replays the server's public event log
@@ -347,22 +348,44 @@
  // waits for the server's next push instead - the server has already
  // resolved every AI turn by the time that push arrives.
  async function driveOnline(t){
+  // Each online hand's event log restarts from index 0 on the server (see
+  // multiplayer.js's _applyEventsMessage), but eventIndex is this file's own
+  // separate replay cursor - nothing else ever rewound it, so from hand 2
+  // onward it stayed pointed past the end of the new, shorter array and the
+  // inner loop below silently never ran again: the board, cards and message
+  // froze at hand 1 forever while turn-taking kept working underneath,
+  // since that reads table.actor/table.result directly. Catch the same
+  // hand-number change beginOnlinePlay() handles for hand 1, every hand -
+  // and before the render() just below, which would otherwise mix this
+  // hand's fresh hole cards with last hand's still-stale visibleBoard (a
+  // coincidentally reused card there throws deep inside Poker.evaluate and
+  // silently aborts this whole async function, leaving busy stuck true).
+  if(table.handNumber!==onlineHandNumber){onlineHandNumber=table.handNumber;eventIndex=0;visibleSeats=table.players.map(function(p){return {stack:p.stack,bet:0,folded:false,allIn:false,lastAction:''};});visibleBoard=[];visiblePot=0;visibleStreet='preflop';revealed=false;}
   busy=true;activeSeat=null;render();
-  while(t===version&&online){
-   while(eventIndex<table.events.length){
-    var e=table.events[eventIndex];applyPublicEvent(e);
-    if(e.type==='hand-start'){sound('shuffle');visibleStreet='preflop';visibleBoard=[];revealed=false;visiblePot=0;render();for(var d=0;d<table.players.filter(function(p){return p.hole.length;}).length*2;d++){sound('deal',d%table.players.length);if(!await wait(75,t))return;}setMessage('');}
-    if(e.type==='blind'||e.type==='action'){visiblePot+=e.amount||0;if(e.type==='action'){sound(e.action==='call'?'chips':e.action==='allin'?'raise':e.action,e.playerId);setMessage((table.names[e.playerId]||'Someone')+' · '+e.text);}else sound('chips',e.playerId);if(e.amount)chipFlight(e.playerId);render();if(!await wait(e.type==='blind'?550:350,t))return;}
-    if(e.type==='street'){visibleStreet=e.street;setMessage({flop:'',turn:'',river:''}[e.street]);for(var k=Math.max(0,visibleBoard.length-(e.board.length-e.cards.length));k<e.cards.length;k++){visibleBoard.push(e.cards[k]);sound('flip');render();if(!await wait(320,t))return;}if(!await wait(220,t))return;}
-    if(e.type==='result'){visibleStreet='showdown';revealed=true;visiblePot=e.result.totalPot;var wins=e.result.winners.filter(function(w){return w.wonAmount>0;});var bonusText=(e.result.bonus||[]).map(function(b){return (b.playerId===0?'You pocket':(table.names[b.playerId]||'Someone')+' pockets')+' a Jack-Two bonus of '+b.amount+' from the table!';}).join(' ');setMessage(HearthPresentation.resultLabel(e.result,table.names)+(bonusText?' · '+bonusText:''),true);var humanWin=wins.some(function(w){return w.id===0;});sound(humanWin?'win':'lose');var wa=anchors();burst(humanWin?wa.heroWin[0]:seatPoint(wins[0]?wins[0].id:0)[0],humanWin?wa.heroWin[1]:wa.rivalWinY,humanWin?22:9);$('potValue').classList.add('burst');setTimeout(function(){$('potValue').classList.remove('burst');},500);render();if(!await wait(500,t))return;}
-    eventIndex++;
+  // An uncaught exception anywhere in here (this bug, or a future one) used
+  // to abort this whole async function silently, leaving busy stuck true
+  // forever with no way back in short of a page reload - mirrors drive()'s
+  // own try/catch around stepAI() for the same reason.
+  try{
+   while(t===version&&online){
+    while(eventIndex<table.events.length){
+     var e=table.events[eventIndex];applyPublicEvent(e);
+     if(e.type==='hand-start'){sound('shuffle');visibleStreet='preflop';visibleBoard=[];revealed=false;visiblePot=0;render();for(var d=0;d<table.players.filter(function(p){return p.hole.length;}).length*2;d++){sound('deal',d%table.players.length);if(!await wait(75,t))return;}setMessage('');}
+     if(e.type==='blind'||e.type==='action'){visiblePot+=e.amount||0;if(e.type==='action'){sound(e.action==='call'?'chips':e.action==='allin'?'raise':e.action,e.playerId);setMessage((table.names[e.playerId]||'Someone')+' · '+e.text);}else sound('chips',e.playerId);if(e.amount)chipFlight(e.playerId);render();if(!await wait(e.type==='blind'?550:350,t))return;}
+     if(e.type==='street'){visibleStreet=e.street;setMessage({flop:'',turn:'',river:''}[e.street]);for(var k=Math.max(0,visibleBoard.length-(e.board.length-e.cards.length));k<e.cards.length;k++){visibleBoard.push(e.cards[k]);sound('flip');render();if(!await wait(320,t))return;}if(!await wait(220,t))return;}
+     if(e.type==='result'){visibleStreet='showdown';revealed=true;visiblePot=e.result.totalPot;var wins=e.result.winners.filter(function(w){return w.wonAmount>0;});var bonusText=(e.result.bonus||[]).map(function(b){return (b.playerId===0?'You pocket':(table.names[b.playerId]||'Someone')+' pockets')+' a Jack-Two bonus of '+b.amount+' from the table!';}).join(' ');setMessage(HearthPresentation.resultLabel(e.result,table.names)+(bonusText?' · '+bonusText:''),true);var humanWin=wins.some(function(w){return w.id===0;});sound(humanWin?'win':'lose');var wa=anchors();burst(humanWin?wa.heroWin[0]:seatPoint(wins[0]?wins[0].id:0)[0],humanWin?wa.heroWin[1]:wa.rivalWinY,humanWin?22:9);$('potValue').classList.add('burst');setTimeout(function(){$('potValue').classList.remove('burst');},500);render();if(!await wait(500,t))return;}
+     eventIndex++;
+    }
+    if(!online)return;
+    if(table.result||table.actor===0||table.actor===null)break;
+    activeSeat=table.actor;render();
+    if(!await HearthOnline.waitForEvents(t))return;
    }
-   if(!online)return;
-   if(table.result||table.actor===0||table.actor===null)break;
-   activeSeat=table.actor;render();
-   if(!await HearthOnline.waitForEvents(t))return;
+   if(t!==version||!online)return;busy=false;activeSeat=table.result?null:table.actor;render();if(table.actor===0&&!table.result)sound('turn');
+  }catch(err){
+   console.error(err);
+   if(t===version&&online){busy=false;activeSeat=null;setMessage('Something went wrong catching up on the table. Try your action again, or leave and rejoin the room.');renderActions();}
   }
-  if(t!==version||!online)return;busy=false;activeSeat=table.result?null:table.actor;render();if(table.actor===0&&!table.result)sound('turn');
  }
  HearthOnline.on('lobby',function(msg){if(!online)renderOnlineLobby(msg);else if(reconnecting){reconnecting=false;reconnectAttempts=0;}});
  // Once already online, driveOnline()'s own waitForEvents(t) call is what
