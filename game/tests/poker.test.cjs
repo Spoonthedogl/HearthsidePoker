@@ -185,6 +185,16 @@ test('fold victory pays contributions and does not reveal unshown hands', () => 
   assert.deepEqual(t.snapshot().players[2].hole,[null,null]);assert.equal(chips(t),2000);
 });
 
+test('snapshot(viewer) reveals only the requested seat; viewer:null reveals none', () => {
+  const t=new P.Table({random:seeded(3)});t.newHand();
+  assert.deepEqual(t.snapshot({viewer:0}).players[0].hole,t.players[0].hole);
+  assert.deepEqual(t.snapshot({viewer:0}).players[2].hole,[null,null]);
+  assert.deepEqual(t.snapshot({viewer:2}).players[2].hole,t.players[2].hole);
+  assert.deepEqual(t.snapshot({viewer:2}).players[0].hole,[null,null]);
+  assert.deepEqual(t.snapshot({viewer:null}).players[0].hole,[null,null]);
+  assert.deepEqual(t.snapshot({viewer:null}).players[2].hole,[null,null]);
+});
+
 test('short all-in does not reopen a previous raise or call', () => {
   const t=new P.Table({random:seeded(4)});t.players[1].stack=35;t.newHand();
   t.act(3,'raise',30);t.act(0,'call');t.act(1,'allin');t.act(2,'call');
@@ -261,6 +271,12 @@ test('fair AI cannot depend on real hidden hole cards or deck order', () => {
   t.players[0].hole=cards('As Ah');t.players[1].hole=cards('Ks Kh');t.players[2].hole=cards('Qs Qh');
   t.deck.reverse();t.random=seeded(111);
   assert.deepEqual(t.chooseAIAction(),first);
+});
+
+test('humanSeats controls which seats refuse an AI action, not just seat 0', () => {
+  const t=new P.Table({random:seeded(220),humanSeats:[2]});t.newHand();
+  t.actor=2;assert.throws(()=>t.chooseAIAction(),/No AI is currently acting/);
+  t.actor=0;assert.doesNotThrow(()=>t.chooseAIAction());
 });
 
 test('400 seeded random-action hands terminate, preserve chips, and keep cards unique', () => {
