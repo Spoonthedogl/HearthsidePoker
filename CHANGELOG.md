@@ -1,5 +1,21 @@
 # Changelog
 
+## v1.6.2 — 2026-09-14
+
+The real fix for hand 2 freezing online.
+
+**Save compatibility:** unaffected.
+
+### Fixed
+
+- **The table no longer freezes after the first online hand.** v1.6.1's
+  reconnect fix addressed a real gap, but a separate, more fundamental
+  bug survived it: the board, cards and message could stay stuck on
+  hand 1 forever while the hand counter kept climbing underneath. Also
+  closes a related crash a player busting via all-in could trigger.
+- A player sitting out a hand after busting now shows "Sitting out"
+  instead of a stray "undefined high".
+
 ## v1.6.1 — 2026-09-14
 
 Online play fixes, from the first real sessions with friends.
