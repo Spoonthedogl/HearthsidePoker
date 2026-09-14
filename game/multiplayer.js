@@ -28,8 +28,7 @@
 
   function defaultServer() {
     try { var override = localStorage.getItem('hearthside-server'); if (override) return override; } catch (e) {}
-    // Replace with your own deployed Worker's wss:// URL (see worker/README.md).
-    return 'wss://hearthside-rooms.example.workers.dev';
+    return 'wss://hearthside-rooms.hearthside.workers.dev';
   }
 
   // Everything app.js reads off a Poker.Table, fed entirely by server
