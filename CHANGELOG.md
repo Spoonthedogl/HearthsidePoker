@@ -1,5 +1,21 @@
 # Changelog
 
+## v1.6.3 — 2026-09-15
+
+Online play survives a reload now.
+
+**Save compatibility:** unaffected.
+
+### Added
+
+- **A dropped or reloaded browser tab can rejoin an online room.** If a
+  phone backgrounds the game long enough to discard the tab (or you
+  just refresh by accident), "Rejoin room CODE" appears on the main
+  screen and puts you straight back in your seat, mid-hand.
+- Coming back to the tab now double-checks the connection right away
+  and quietly reconnects if it had gone stale in the background,
+  instead of waiting for your next click to notice.
+
 ## v1.6.2 — 2026-09-14
 
 The real fix for hand 2 freezing online.
