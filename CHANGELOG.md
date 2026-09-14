@@ -1,5 +1,36 @@
 # Changelog
 
+## v1.5.1 — 2026-09-14
+
+A pass over the phone layout and the parts of the game that were hard for a
+newcomer to read.
+
+**Save compatibility:** unaffected. Rules, saves and the club fund are unchanged
+— this release only fixes how things are drawn and explained.
+
+### Fixed
+
+- **The cat is back on the windowsill on phones.** In portrait the room art is
+  fitted to the width and drawn at about half size, but the sleeping cat was
+  still placed and sized for the desktop layout, so it drifted off its cushion
+  and out of sight. It now sits on the sill again, with all of its poses.
+- **Playing cards read cleanly on phones.** The rotated index in the
+  bottom-right corner of every card was being stretched across the whole face,
+  smearing the rank and suit over the middle. Your cards, the community cards
+  and the cards in the journal are now crisp.
+
+### Changed
+
+- **The hand guide is easier to find and use.** "Hand details" is now a clearly
+  tappable **See your chances** button, and the possibilities screen spells out
+  that you can tap any hand to see an example — and, once the flop is down, the
+  exact cards you'd still need to make it.
+- **How to play, rewritten for newcomers.** It now assumes no poker knowledge:
+  it says what the blinds are, how a hand plays from deal to showdown, and what
+  check, call, raise and fold each mean, in plain words.
+
+---
+
 ## v1.5.0 — 2026-09-13
 
 Play it on your phone. The same game now installs as an Android app and adds to
