@@ -24,9 +24,11 @@
  *                         allIn,allInCanRaise}.
  * .act(id,'fold'|'check'|'call'|'raise'|'allin',raiseTo?) performs ONE action.
  * A raise amount is the TOTAL bet on this street, not an increment.
- * .stepAI() performs one current AI action; id 0 is always human.
+ * .stepAI() performs one current AI action; seats in .humanSeats (default {0})
+ * are never stepped by AI, so an online room can hand any seat to a person.
  * .chooseAIAction() returns {type,amount?}, using own/public info only.
- * .snapshot({revealAll:false}) hides opponents until their showdown reveal.
+ * .snapshot({viewer:0,revealAll:false}) hides every hole card except the
+ * viewer's own and any already revealed at showdown; viewer:null hides all.
  * Streets advance automatically once betting closes. All-in runouts finish
  * automatically. UI can animate newly appended .events in order. Each event
  * has monotonically increasing id/type/handNumber/street. Result has
@@ -336,6 +338,11 @@
       // stacks, so this is the one number that explains a changed table total.
       this.injected = 0;
       this.difficulty = Object.prototype.hasOwnProperty.call(DIFFICULTY, options.difficulty) ? options.difficulty : 'standard';
+      // Which seats are played by a person rather than the AI. Single-player
+      // and every existing save always mean {0}; an online room fills this
+      // with whichever seats a person has joined, so the same engine referees
+      // both without caring who is on the other end of an action.
+      this.humanSeats = new Set(options.humanSeats || [0]);
     }
     get pot() { return this.players.reduce((sum, p) => sum + p.totalBet, 0); }
     _event(type, data = {}) { const event = {id: ++this.eventId, type, handNumber: this.handNumber, street: this.street, ...data}; this.events.push(event); return event; }
@@ -501,7 +508,7 @@
       this._event('result', {result: this.result});
     }
     chooseAIAction() {
-      if (this.actor === null || this.actor === 0) throw new Error('No AI is currently acting.');
+      if (this.actor === null || this.humanSeats.has(this.actor)) throw new Error('No AI is currently acting.');
       const p = this.players[this.actor];
       let highestBet = this.street === 'preflop' ? this.bigBlind : 0, streetRaiseCount = 0, ownRaiseCount = 0;
       for (const event of this.events) {
@@ -527,8 +534,12 @@
       return this.startingStack;
     }
     snapshot(options = {}) {
+      // Defaults to the single-player viewer (seat 0) so every existing call
+      // site is unaffected; an online referee passes the seat it's building
+      // this payload for, or null for a spectator who owns no seat at all.
+      const viewer = options.viewer === undefined ? 0 : options.viewer;
       const revealed = new Set(this.result ? this.result.showdown.map(p => p.id) : []);
-      return {players: this.players.map(p => ({id: p.id, name: p.name, stack: p.stack, hole: p.id === 0 || options.revealAll || revealed.has(p.id) ? p.hole.map(c => ({...c})) : p.hole.map(() => null), folded: p.folded, allIn: p.allIn, bet: p.bet, totalBet: p.totalBet, lastAction: p.lastAction})),
+      return {players: this.players.map(p => ({id: p.id, name: p.name, stack: p.stack, hole: p.id === viewer || options.revealAll || revealed.has(p.id) ? p.hole.map(c => ({...c})) : p.hole.map(() => null), folded: p.folded, allIn: p.allIn, bet: p.bet, totalBet: p.totalBet, lastAction: p.lastAction})),
         board: this.board.map(c => ({...c})), street: this.street, dealer: this.dealer, actor: this.actor, currentBet: this.currentBet, minRaise: this.minRaise, pot: this.pot, handNumber: this.handNumber, result: this.result, gameOver: this.gameOver};
     }
   }
