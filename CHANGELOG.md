@@ -1,5 +1,18 @@
 # Changelog
 
+## v1.6.4 — 2026-09-15
+
+Fixes a table that could stall forever once too many players busted.
+
+**Save compatibility:** unaffected.
+
+### Fixed
+
+- **A hand that leaves fewer than two players with any chips no longer
+  stalls the table.** Everyone clicking "Ready for the next hand" used
+  to look like it worked but never actually dealt again. The table now
+  correctly closes with a clear message and a way to leave.
+
 ## v1.6.3 — 2026-09-15
 
 Online play survives a reload now.
