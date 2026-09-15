@@ -81,7 +81,7 @@
  function emptyCard(i){var e=document.createElement('div');e.className='card empty';e.textContent=['✧','✧','✧','·','·'][i];e.title=['Flop','Flop','Flop','Turn','River'][i]+' · not dealt yet';return e;}
  function replaceCards(el,cards,opts){var sig=cards.map(function(c){return c?Poker.cardKey(c):'?';}).join(',')+'|'+(opts&&opts.best||[]).join(',');if(el.dataset.sig===sig)return;var old=(el.dataset.sig||'').split('|')[0].split(',');el.dataset.sig=sig;el.innerHTML='';cards.forEach(function(c,i){el.appendChild(card(c,{best:c&&opts&&opts.best&&opts.best.indexOf(Poker.cardKey(c))>=0,enter:opts&&opts.animate&&old[i]!==(c?Poker.cardKey(c):'?')}));});}
  function current(){return Poker.evaluate(table.players[0].hole.concat(visibleBoard));}
- function paused(){return !$('journal').classList.contains('hidden')||['settings','rules','confirmReset','recap','eveningClose','shelf','online'].some(function(id){return !$(id).classList.contains('hidden');});}
+ function paused(){return !$('journal').classList.contains('hidden')||['settings','rules','confirmReset','recap','eveningClose','shelf','online','gameOver'].some(function(id){return !$(id).classList.contains('hidden');});}
  function syncScenePause(){var context=companionContext();$('stage').classList.toggle('scene-paused',context.paused||context.hidden);ambience.setPaused(context.paused);cat.tick(0,{paused:context.paused,hidden:context.hidden,gentle:$('reducedMotion').checked});}
  function wait(ms,t){return new Promise(function(resolve){var left=ms,last=Date.now();function tick(){if(t!==version){resolve(false);return;}var now=Date.now();if(!paused()&&!document.hidden)left-=(now-last)/HearthSession.paceFactor(pace);last=now;if(left<=0){resolve(true);return;}setTimeout(tick,40);}tick();});}
  function sound(name,id){audio.play(name,{pan:id>0?Number($('seat'+id).dataset.pan):0});}
@@ -101,7 +101,7 @@
  function seatPoint(id){var el=$('seat'+id);return el?[Number(el.dataset.chipX),Number(el.dataset.chipY)]:anchors().hero;}
  function chipFlight(id){if($('reducedMotion').checked)return;var a=anchors(),from=id===0?a.hero:seatPoint(id);for(var i=0;i<4;i++){var p=document.createElement('span');p.className='particle';p.textContent='◉';p.style.left=from[0]+i*3+'px';p.style.top=from[1]+'px';p.style.setProperty('--dx',(a.pot[0]-from[0])+'px');p.style.setProperty('--dy',(a.pot[1]-from[1])+'px');p.style.animationDuration=(.65*HearthSession.paceFactor(pace))+'s';p.style.animationDelay=i*.045+'s';$('particles').appendChild(p);setTimeout(function(n){return function(){n.remove();};}(p),950);}}
  function render(){var snap=table.snapshot(),ev=current(),keys=visibleBoard.length>=3?ev.bestCards.map(Poker.cardKey):[];
-  $('handNo').textContent=online?'HAND '+(table.handNumber||1):'HAND '+Math.min(eveningHands+(revealed?0:1)||1,HearthClub.EVENING_HANDS)+' OF '+HearthClub.EVENING_HANDS;$('potValue').textContent=visiblePot.toLocaleString();$('blindsInfo').textContent='BLINDS '+table.smallBlind+' / '+table.bigBlind;
+  $('handNo').textContent=online?'GAME '+(table.gamesPlayed||1)+' · HAND '+(table.gameHand||1)+' OF '+(table.handsPerGame||7):'HAND '+Math.min(eveningHands+(revealed?0:1)||1,HearthClub.EVENING_HANDS)+' OF '+HearthClub.EVENING_HANDS;$('potValue').textContent=visiblePot.toLocaleString();$('blindsInfo').textContent='BLINDS '+table.smallBlind+' / '+table.bigBlind;
   $('streetRibbon').textContent=visibleStreet==='idle'?'':visibleStreet.toUpperCase();
   var chips='';for(var c=0;c<Math.min(11,Math.ceil(visiblePot/15));c++)chips+='<i class="chip '+(c%3===1?'green':c%3===2?'purple':'')+'" style="left:'+((c%3)*15)+'px;bottom:'+Math.floor(c/3)*4+'px"></i>';$('chipPile').innerHTML=chips;
   for(var i=1;i<table.players.length;i++){var p=snap.players[i],v=visibleSeats[i],seat=$('seat'+i),mood=started?(v.folded?'folded':v.allIn?'allin':'playing'):'playing';seat.querySelector('.stack').textContent=v.stack.toLocaleString();seat.querySelector('.status').textContent=!started?'Ready':(activeSeat===i&&!revealed?'Their turn':v.lastAction||(v.folded?'Resting':''));seat.querySelector('.dealer-token').style.display=started&&snap.dealer===i?'block':'none';seat.classList.toggle('active',started&&activeSeat===i&&!revealed);seat.querySelector('.nameplate').setAttribute('aria-current',activeSeat===i?'true':'false');HearthPresentation.renderChips(seat.querySelector('.npc-chips'),v.stack,names[i]);seat.classList.toggle('folded',started&&v.folded);seat.dataset.mood=mood;var sprite=seat.querySelector('.sprite');sprite.setAttribute('role','img');sprite.setAttribute('aria-label',names[i]+', '+(mood==='allin'?'all in':mood==='folded'?'sitting this hand out':'playing'));replaceCards(seat.querySelector('.opponent-cards'),started?p.hole.map(function(c){return revealed?c:null;}):[null,null],{animate:true});}
@@ -123,11 +123,11 @@
   if(online){
    if(!HearthOnline.started){$('turnText').textContent='IN THE LOBBY';$('turnHint').textContent='';btns.innerHTML='<button disabled class="primary">Waiting to begin…</button>';return;}
    if(busy){$('turnText').textContent='WAITING';$('turnHint').textContent='';btns.innerHTML='<button disabled class="subtle-button">Fold</button><button disabled>Check / call</button><button disabled class="raise-button">Raise</button>';return;}
-   // Online never rebuys a busted seat (there's no buy-in economy to draw
-   // from), so once a hand leaves fewer than two seats with any chips,
-   // table.gameOver is the table's own permanent answer - there is no next
-   // hand to ready up for, ever, for this room.
-   if(table.gameOver){$('turnText').textContent='TABLE CLOSED';$('turnHint').textContent='Not enough players still have chips to continue.';btns.innerHTML='<button id="onlineLeaveSubmit" class="primary">Leave the room</button>';return;}
+   // Online has no buy-in economy to rebuy from mid-game, so a busted seat
+   // just sits out the rest of the current game (the server has already
+   // stopped requiring its "ready" click too) - a fresh stack and a real
+   // hand are only ever a new game away, not a button click.
+   if(table.players[0].stack===0){$('turnText').textContent="YOU'RE OUT THIS GAME";$('turnHint').textContent='Watching the rest of this game play out.';btns.innerHTML='<button disabled>Waiting for the next game…</button>';return;}
    if(table.result){$('turnText').textContent='HAND COMPLETE';$('turnHint').textContent='';btns.innerHTML='<button id="onlineNextSubmit" class="primary">Ready for the next hand <span>↗</span></button>';return;}
    if(table.actor!==0){$('turnText').textContent='WAITING';$('turnHint').textContent=(table.names[table.actor]||'Someone')+' is deciding.';btns.innerHTML='<button disabled>Cards in motion…</button>';return;}
    var ol=table.legalActions();$('turnText').textContent='YOUR TURN';$('turnHint').textContent=ol.check?'':ol.call+' chips to call';
@@ -224,7 +224,7 @@
  function hypotheticalHTML(example){if(!example)return '<p>No example of this rare outcome appeared in the sample. It may still be possible.</p>';var futureKeys=example.futureBoard.map(Poker.cardKey);return '<p><b>One possible version of your hand</b><br>This is an illustration, not a prediction of the deck.</p><div class="example-hand">'+example.bestCards.map(function(c){var k=Poker.cardKey(c),isFuture=futureKeys.indexOf(k)>=0,label=isFuture?'POSSIBLE':example.usedHoleKeys.indexOf(k)>=0?'YOURS':'TABLE';return '<div class="example-slot '+(isFuture?'hypothetical':'')+'">'+card(c).outerHTML+'<small>'+label+'</small></div>';}).join('')+'</div>'+(example.futureBoard.length?'<p>Example future board: '+example.futureBoard.map(function(c){return (rank[c.rank]||c.rank)+suit[c.suit];}).join(' · ')+'. Dotted cards above have not been dealt.</p>':'');}
  function renderDetail(c){selectedCategory=c;var title=c===9?'Royal flush':Poker.CATEGORY_NAMES[c];var html='<div class="guide-detail"><b>'+title+'</b><br>'+(c===9?'Ten, jack, queen, king and ace in the same suit. This is the strongest straight flush.':descriptions[c])+cardExample(c===9?['Ah','Kh','Qh','Jh','10h']:examples[c]);if(guideTab==='possibilities'&&started){var a=getAnalysis(),row=a&&a.rows[c];if(row&&row.possible!==false)html+=hypotheticalHTML(row.example);if(row&&visibleBoard.length>=3&&visibleBoard.length<5){html+='<p>These unseen <b>next cards</b> immediately change your current hand to this stronger category. They are not guaranteed winning cards.</p>';if(row.outs.length)html+='<div class="out-cards">'+row.outs.map(function(k){var s=k.slice(-1),r=Number(k.slice(0,-1));return '<span class="out-card '+(s==='h'||s==='d'?'red ':'')+'suit-'+s+'">'+(rank[r]||r)+suit[s]+'</span>';}).join('')+'</div>';else html+='<p>No single next card immediately upgrades you to this category. The final-hand percentage also includes two-card possibilities when two board cards remain.</p>';}else if(visibleBoard.length===5)html+='<p>All community cards are visible. Your final category is settled.</p>';else html+='<p>The percentages sample possible five-card boards. Specific next-card improvements become useful once the flop appears.</p>';}html+='</div>';$('journalDetail').innerHTML=html;}
  function openJournal(){audio.init();delete guideErrors[analysisKey()];lastFocus=document.activeElement;closeAll(false);$('journalBackdrop').classList.remove('hidden');$('journal').classList.remove('hidden');syncScenePause();renderJournal();sound('guideOpen');$('closeJournal').focus();}
- function closeAll(focus){var had=paused();disarmDiscard();$('journal').classList.add('hidden');['settings','rules','confirmReset','recap','eveningClose','shelf','online'].forEach(function(id){$(id).classList.add('hidden');});$('journalBackdrop').classList.add('hidden');syncScenePause();if(had)sound('guideClose');if(focus!==false&&lastFocus&&lastFocus.isConnected)lastFocus.focus();}
+ function closeAll(focus){var had=paused();disarmDiscard();$('journal').classList.add('hidden');['settings','rules','confirmReset','recap','eveningClose','shelf','online','gameOver'].forEach(function(id){$(id).classList.add('hidden');});$('journalBackdrop').classList.add('hidden');syncScenePause();if(had)sound('guideClose');if(focus!==false&&lastFocus&&lastFocus.isConnected)lastFocus.focus();}
  function openModal(id){audio.init();lastFocus=document.activeElement;closeAll(false);$('journalBackdrop').classList.remove('hidden');$(id).classList.remove('hidden');syncScenePause();sound('guideOpen');var focus=$(id).querySelector('button,input,select');if(focus)focus.focus();}
  document.addEventListener('click',function(e){var b=e.target.closest('button');if(!b||b.disabled)return;var id=b.id;if(b.dataset.close){closeAll();return;}if(b.dataset.action){act(b.dataset.action);return;}if(b.dataset.buy){var bought=HearthClub.buy(club,b.dataset.buy);if(bought.ok){club=bought.state;saveClub();applyComforts();sound('chips');}renderShelf();return;}if(b.dataset.tab){guideTab=b.dataset.tab;selectedCategory=null;document.querySelectorAll('.journal-tabs button').forEach(function(x){x.classList.toggle('selected',x===b);});sound('click');renderJournal();return;}if(b.dataset.category!==undefined){renderDetail(Number(b.dataset.category));sound('click');$('journalDetail').scrollIntoView({block:'nearest',behavior:$('reducedMotion').checked?'auto':'smooth'});return;}if(b.dataset.raise){var l=table.legalActions(),min=Math.min(l.minRaiseTo,l.maxRaiseTo),v=b.dataset.raise==='min'?min:b.dataset.raise==='all'?l.maxRaiseTo:table.currentBet+Math.round((table.pot+l.call)*(b.dataset.raise==='half'?.5:1));v=Math.max(min,Math.min(l.maxRaiseTo,v));$('raiseRange').value=$('raiseNumber').value=v;sound('chips');return;}
   if(id==='resumeGame')closeAll();else if(id==='settingsRules')openModal('rules');else if(id==='quitGame'||id==='windowQuit')quitGame();else if(id==='discardQuit'){if(discardArmed)discardAndQuit();else armDiscard(b);}else if(id==='recapButton'){renderRecap();openModal('recap');}else if(id==='startButton')start();else if(id==='onlineButton'){startOnlineFlow();}else if(id==='onlineRejoinButton'){onlineRejoinRoom();}else if(id==='onlineCreateSubmit')onlineCreateRoom();else if(id==='onlineJoinSubmit')onlineJoinRoom();else if(id==='onlineStartSubmit')HearthOnline.start();else if(id==='onlineNextSubmit'){busy=true;render();HearthOnline.next();driveOnlineAfterAction(version);}else if(id==='onlineLeaveSubmit')onlineLeaveRoom();else if(id==='nextHand'||id==='recapNextHand'){if(busy||!revealed)return;if(eveningOver()){closeEvening();return;}closeAll(false);audio.init();if(table.players[0].stack===0)rebuy();else newHand();}else if(id==='endEvening'){if(busy||!revealed)return;closeEvening();}else if(id==='newEveningButton'){closeAll(false);audio.init();newEvening();}else if(id==='shelfButton'||id==='eveningShelf'){renderShelf();openModal('shelf');}else if(id==='freshTable'){if(busy||!revealed)return;closeAll(false);audio.init();reset();}else if(id==='guideButton'||id==='peekButton')openJournal();else if(id==='closeJournal')closeAll();else if(id==='soundButton'){syncSettings();openModal('settings');}else if(id==='tableSetup'){setupChoices();openModal('confirmReset');}else if(id==='rulesButton')openModal('rules');else if(id==='newTableButton'){setupChoices();openModal('confirmReset');}else if(id==='resetConfirm'){var selected=HearthRoster.selected();if(selected.length!==Number($('tableSize').value)-1)return;names=['You'].concat(selected);tableKind=HearthTables.find($('tableKind').value).id;chosenDifficulty=Poker.DIFFICULTIES.indexOf($('tableDifficulty').value)>=0?$('tableDifficulty').value:'standard';reset();}else if(id==='raiseToggle')raisePanel();else if(id==='raiseConfirm')confirmRaise();else if(id==='muteButton'){audio.toggleMute();syncSettings();saveSettings();}else if(id==='testSound'){audio.init();audio.play('chips',{intensity:1});}
@@ -293,13 +293,14 @@
  function onlineSavedSession(){try{var s=JSON.parse(localStorage.getItem('hearthside-online-session')||'null');if(!s||!s.room||!s.token||Date.now()-(s.savedAt||0)>10*60*1000)return null;return s;}catch(e){return null;}}
  function onlineSaveSession(room,token){try{localStorage.setItem('hearthside-online-session',JSON.stringify({room:room,token:token,savedAt:Date.now()}));}catch(e){}}
  function onlineClearSession(){try{localStorage.removeItem('hearthside-online-session');}catch(e){}}
- function onlineErrorText(code){return {'no-such-room':'That room doesn’t exist. Check the code and try again.','room-full':'That room is already full.','room-already-started':'That room has already started without you.','already-created':'That code is already taken — try Create again for a new one.','connection-failed':'Couldn’t reach the room server. It may not be set up yet — see worker/README.md.','game-over':'Not enough players still have chips to continue.'}[code]||'Something went wrong. Please try again.';}
+ function onlineErrorText(code){return {'no-such-room':'That room doesn’t exist. Check the code and try again.','room-full':'That room is already full.','room-already-started':'That room has already started without you.','already-created':'That code is already taken — try Create again for a new one.','connection-failed':'Couldn’t reach the room server. It may not be set up yet — see worker/README.md.'}[code]||'Something went wrong. Please try again.';}
  function renderOnlineEntry(errorText){
   var body=$('onlineBody');body.innerHTML='<label>Your name<input id="onlineName" maxlength="12" placeholder="Your name"></label>'+
    '<label>Play as<select id="onlineAvatar"></select></label>'+
    '<h3>Create a private room</h3><label>Players<select id="onlineSeatCount"><option value="2">2 players</option><option value="3">3 players</option><option value="4" selected>4 players</option><option value="5">5 players</option><option value="6">6 players</option><option value="7">7 players</option></select></label>'+
    '<label>Companions<select id="onlineDifficulty"><option value="gentle">Gentle</option><option value="standard" selected>Standard</option><option value="sharp">Sharp</option></select></label>'+
    '<label>The evening<select id="onlineTableKind"></select></label>'+
+   '<label>Hands per game<select id="onlineHandsPerGame"><option value="3">3 hands</option><option value="5">5 hands</option><option value="7" selected>7 hands</option><option value="10">10 hands</option><option value="15">15 hands</option></select></label>'+
    '<div class="settings-row"><button id="onlineCreateSubmit" class="primary">Create a room</button></div>'+
    '<h3>Join a friend’s room</h3><label>Room code<input id="onlineCode" maxlength="9" placeholder="BCDF-GH" style="text-transform:uppercase"></label>'+
    '<div class="settings-row"><button id="onlineJoinSubmit" class="primary">Join</button></div>'+
@@ -315,6 +316,7 @@
   var codeLine=document.createElement('p');codeLine.className='pace-note';codeLine.appendChild(document.createTextNode('Room code: '));
   var codeStrong=document.createElement('strong');codeStrong.textContent=onlineRoomCode?HearthRoomCode.display(onlineRoomCode):'…';codeLine.appendChild(codeStrong);
   body.appendChild(codeLine);
+  if(msg.config&&msg.config.handsPerGame){var lenLine=document.createElement('p');lenLine.className='pace-note';lenLine.textContent='A game here runs '+msg.config.handsPerGame+' hands - anyone who busts sits out the rest of it, then everyone starts fresh.';body.appendChild(lenLine);}
   var list=document.createElement('ul');list.className='log-list';
   (msg.seats||[]).forEach(function(s){var li=document.createElement('li');li.textContent=(s.kind==='ai'?'Companion · ':s.connected?'':'Away · ')+s.name;list.appendChild(li);});
   body.appendChild(list);
@@ -327,7 +329,7 @@
   var name=($('onlineName').value||'').trim().slice(0,12)||'Guest';onlineSaveName(name);
   var avatar=$('onlineAvatar').value;onlineSaveAvatar(avatar);
   onlineRoomCode=HearthRoomCode.generate();
-  HearthOnline.connect({room:onlineRoomCode,name:name,avatar:avatar,create:true,cfg:{seatCount:Number($('onlineSeatCount').value),difficulty:$('onlineDifficulty').value,tableKind:$('onlineTableKind').value}});
+  HearthOnline.connect({room:onlineRoomCode,name:name,avatar:avatar,create:true,cfg:{seatCount:Number($('onlineSeatCount').value),difficulty:$('onlineDifficulty').value,tableKind:$('onlineTableKind').value,handsPerGame:Number($('onlineHandsPerGame').value)}});
  }
  function onlineJoinRoom(){
   var name=($('onlineName').value||'').trim().slice(0,12)||'Guest';onlineSaveName(name);
@@ -346,6 +348,19 @@
   closeAll(false);openModal('online');
   $('onlineBody').innerHTML='<p class="pace-note">Rejoining room '+HearthRoomCode.display(saved.room)+'…</p>';
   HearthOnline.connect({room:saved.room,token:saved.token});
+ }
+ function renderGameOver(msg){
+  $('gameOverTitle').textContent='Game '+msg.gamesPlayed+' complete';
+  var body=$('gameOverBody');body.innerHTML='';
+  var standings=document.createElement('ol');standings.className='log-list';
+  (msg.standings||[]).forEach(function(row){var li=document.createElement('li');li.textContent=row.place+'. '+(row.seat===0?'You':row.name)+' — '+row.stack.toLocaleString()+' chips';standings.appendChild(li);});
+  body.appendChild(standings);
+  if(msg.cumulative&&msg.cumulative.length){
+   var h=document.createElement('h3');h.textContent='Session wins';body.appendChild(h);
+   var wins=document.createElement('ul');wins.className='log-list';
+   msg.cumulative.forEach(function(row){var li=document.createElement('li');li.textContent=(row.seat===0?'You':row.name)+' — '+row.wins+(row.wins===1?' win':' wins');wins.appendChild(li);});
+   body.appendChild(wins);
+  }
  }
  function onlineLeaveRoom(){
   HearthOnline.leave();HearthOnline.disconnect();
@@ -426,6 +441,12 @@
  // except right after a reconnect: that loop already returned (its wait was
  // cancelled when the old socket closed), so it has to be restarted here.
  HearthOnline.on('events',function(){if(!online){onlineRejoining=false;beginOnlinePlay();}else if(reconnecting){reconnecting=false;reconnectAttempts=0;beginOnlinePlay();}});
+ // Not a poker.js event - a standalone notice the server sends alongside
+ // (just before) the fresh game's own dealt-hand broadcast. Shown as its own
+ // pausing modal rather than folded into driveOnline()'s replay: the new
+ // game keeps dealing normally underneath regardless of whether anyone has
+ // dismissed this yet.
+ HearthOnline.on('game-over',function(msg){renderGameOver(msg);openModal('gameOver');});
  // A rejected action (a stale click, a timing race) must not leave the table
  // stuck mid-"waiting" forever - fall back to whatever the table already
  // knows, which is still correct since nothing here invalidated it.

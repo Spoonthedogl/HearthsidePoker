@@ -235,10 +235,11 @@ test('blinds still progress hand over hand by the chosen table schedule', () => 
   assert.deepEqual({small: room.table.smallBlind, big: room.table.bigBlind}, {small: 10, big: 20});
 });
 
-// Online has no buy-in economy to fall back on (unlike single-player's own
-// automatic rebuy) - if a hand leaves fewer than two seats with any chips,
-// there is no next hand to deal, ever, for this room.
-test('a hand that leaves fewer than two seats with chips reports game over, not a silent stuck loop', () => {
+// Online has no buy-in economy to rebuy a busted seat mid-game (unlike
+// single-player's own automatic rebuy) - instead, a room plays a fixed-
+// length "game" that ends early the moment only one seat still has chips,
+// then resets every seat and deals straight into a new game.
+test('a game that busts down to one funded seat ends immediately, resets every seat, and credits a win', () => {
   const room = new Room({random: seeded(20)});
   const owner = room.create('Alice', {seatCount: 2}, 0);
   const bob = room.hello(null, 'Bob', 0);
@@ -250,20 +251,93 @@ test('a hand that leaves fewer than two seats with chips reports game over, not 
     const action = legal.canRaise ? 'allin' : legal.check ? 'check' : 'call';
     room.act(token, {handNumber: room.table.handNumber, action}, 0);
   }
-  const funded = room.table.players.filter((p) => p.stack > 0).length;
-  assert(funded < 2, 'test setup: the shove/call line must leave fewer than two seats funded');
-  const beforeHandNumber = room.table.handNumber;
+  const stacksAfterHand1 = room.table.players.map((p) => p.stack);
+  assert(stacksAfterHand1.some((s) => s === 0), 'test setup: the shove/call line must bust someone');
+  const winnerSeat = stacksAfterHand1[0] > 0 ? 0 : 1;
+  const winnerToken = winnerSeat === 0 ? owner.token : bob.token;
 
-  room.next(owner.token, 0);
-  room.next(bob.token, 0);
-  assert.equal(room.table.gameOver, true, 'newHand() refusing to deal must actually be reflected on the table');
-  assert.equal(room.table.handNumber, beforeHandNumber, 'a hand that cannot be dealt must not silently pretend to be a new one');
+  // Only the still-funded seat has anything left to decide, so only its own
+  // next() is sent here - matching what a real busted client now does too.
+  const result = room.next(winnerToken, 0);
+  assert.equal(result.ok, true);
+  assert.equal(room.gamesPlayed, 2, 'a new game must have started');
+  assert.equal(room.handsPlayed, 0, "the new game's own hand counter starts fresh");
+  // _startNewGame() resets every stack to 500 AND immediately deals hand 1
+  // of the new game, which posts blinds right away - so by the time this is
+  // observable, a blind is already sitting in the pot rather than a stack.
+  // Total chips (stacks + pot) being exactly 2x500 proves the reset itself
+  // happened without also asserting past the point blinds legitimately move.
+  const total = room.table.players.reduce((sum, p) => sum + p.stack, 0) + room.table.pot;
+  assert.equal(total, 1000, 'every seat must be refunded to a fresh 500 for the new game');
+  assert.equal(room.table.handNumber, 2, 'a real new hand must actually be dealt, not silently withheld');
+  assert.equal(room.cumulativeWins[winnerToken], 1, 'the seat that ended the previous game on top gets credited a win');
 
-  // Clicking "ready" again - exactly what a stuck player would do - must not
-  // keep silently succeeding and resending the same stale hand forever.
-  const again = room.next(owner.token, 0);
-  assert.equal(again.ok, false);
-  assert.equal(again.error, 'game-over');
+  var gameOverMsgs = result.out.filter((o) => o.msg.t === 'game-over');
+  assert.equal(gameOverMsgs.length, 2, 'the game-over notice (not a poker.js event) must reach every seated player, not just whoever triggered it');
+});
+
+test('a game also ends after the configured hand count, even if nobody busts', () => {
+  const room = new Room({random: seeded(21)});
+  const owner = room.create('Alice', {seatCount: 2, handsPerGame: 3}, 0);
+  const bob = room.hello(null, 'Bob', 0);
+  room.start(owner.token, 0);
+  for (let hand = 0; hand < 3; hand++) {
+    while (!room.table.result) {
+      const actor = room.table.actor;
+      const token = actor === 0 ? owner.token : bob.token;
+      const legal = room.table.legalActions(actor);
+      room.act(token, {handNumber: room.table.handNumber, action: legal.check ? 'check' : 'call'}, 0);
+    }
+    room.next(owner.token, 0);
+    room.next(bob.token, 0);
+  }
+  assert.equal(room.gamesPlayed, 2, 'a fresh game must start right after the 3rd hand of the first one concludes');
+  assert.equal(room.handsPlayed, 0);
+  // See the equivalent comment above: the new game's hand 1 is already
+  // dealt (and its blind already posted) by the time this runs.
+  const total = room.table.players.reduce((sum, p) => sum + p.stack, 0) + room.table.pot;
+  assert.equal(total, 1000);
+});
+
+test('standings rank funded seats by stack, then busted seats by how long they lasted', () => {
+  const room = new Room({random: seeded(22)});
+  const owner = room.create('Alice', {seatCount: 4}, 0);
+  room.hello(null, 'Bob', 0);
+  room.hello(null, 'Carol', 0);
+  room.hello(null, 'Dave', 0);
+  room.start(owner.token, 0);
+  // Shaped directly rather than scripted through real hands - only the
+  // sort logic itself is under test here.
+  room.table.players[0].stack = 1200;
+  room.table.players[1].stack = 300;
+  room.table.players[2].stack = 0;
+  room.table.players[3].stack = 0;
+  room.bustOrder = [2, 3]; // seat 2 busted first; seat 3 lasted longer
+  const standings = room._standings();
+  assert.deepEqual(standings.map((s) => s.seat), [0, 1, 3, 2]);
+  assert.deepEqual(standings.map((s) => s.place), [1, 2, 3, 4]);
+});
+
+test('cumulative wins accumulate across multiple games played in the same room', () => {
+  const room = new Room({random: seeded(23)});
+  // 3 is sanitizeConfig()'s own floor for handsPerGame - a real, deliberate
+  // minimum, not a number this test should try to go below.
+  const owner = room.create('Alice', {seatCount: 2, handsPerGame: 3}, 0);
+  const bob = room.hello(null, 'Bob', 0);
+  room.start(owner.token, 0);
+  for (let hand = 0; hand < 6; hand++) { // 2 games of 3 hands each
+    while (!room.table.result) {
+      const actor = room.table.actor;
+      const token = actor === 0 ? owner.token : bob.token;
+      const legal = room.table.legalActions(actor);
+      room.act(token, {handNumber: room.table.handNumber, action: legal.check ? 'check' : 'call'}, 0);
+    }
+    room.next(owner.token, 0);
+    room.next(bob.token, 0);
+  }
+  const totalWins = (room.cumulativeWins[owner.token] || 0) + (room.cumulativeWins[bob.token] || 0);
+  assert.equal(totalWins, 2, 'each of the 2 completed games must credit exactly one winner');
+  assert.equal(room.gamesPlayed, 3, 'two games completed means the room is now on its 3rd');
 });
 
 // The highest-value test: script full sessions with a mix of human and AI
