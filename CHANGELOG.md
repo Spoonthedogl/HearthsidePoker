@@ -1,5 +1,18 @@
 # Changelog
 
+## v1.6.15 — 2026-09-15
+
+A follow-up to v1.6.14's candle-chest fix.
+
+**Save compatibility:** unaffected.
+
+### Fixed
+
+- **The candle chest's cutout no longer carries a visible slab of
+  floor and wall with it.** The first pass at giving the chest its
+  own layer traced too loose an outline; it's now a tight, deliberate
+  crop of just the chest, cloth and candle themselves.
+
 ## v1.6.14 — 2026-09-15
 
 Another table polish fix, following up on v1.6.13.
