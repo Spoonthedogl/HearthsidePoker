@@ -1,5 +1,20 @@
 # Changelog
 
+## v1.6.6 — 2026-09-15
+
+Small online-play polish: sharing a room code and noticing a dropped
+opponent are both easier now.
+
+**Save compatibility:** unaffected.
+
+### Added
+
+- **A "Copy" button next to the room code** in the online lobby, so sharing
+  it doesn't mean reading it aloud or typing it out by hand.
+- **A live "Away" tag** appears on a seat the instant that player
+  disconnects mid-game, instead of only catching up once the next hand
+  happens to deal.
+
 ## v1.6.5 — 2026-09-15
 
 Online play now runs in fixed-length games, so a bust never means sitting

@@ -73,13 +73,18 @@ localStorage.setItem('hearthside-server', 'ws://127.0.0.1:8787');
 - Unclaimed seats are played by the existing AI companions — a two-friend
   room still looks and feels like Hearthside.
 - A dropped connection gets 60 seconds to return before its seat
-  auto-checks/folds (15 seconds if it was already known to be disconnected).
+  auto-checks/folds (15 seconds if it was already known to be disconnected),
+  and shows an "Away" tag at the table for everyone else in the meantime.
   No AI ever takes over a human's seat without them choosing that themselves
   in a future release.
 - The room survives any disconnect; ten minutes after the *last* socket
   closes, its storage is deleted.
 - Online rooms don't use the single-player game's 12-hand "evening" or club
-  fund — they just play hands, for as long as anyone's there.
+  fund. Instead they play a fixed-length game (7 hands by default, 3–20
+  configurable) — a bust just means sitting out the rest of that game, not
+  the room. A standings screen ranks everyone at the end (by final chips, or
+  how long a busted seat lasted) and tracks a running win count for the
+  room's players, then every seat is refunded into a fresh game.
 
 ## What v1 does not do yet
 
