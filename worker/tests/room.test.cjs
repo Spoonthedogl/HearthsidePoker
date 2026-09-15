@@ -220,6 +220,26 @@ test('the between-hands grace period deals even if someone never clicks ready', 
   assert.equal(room.table.handNumber, handAfterFirst + 1);
 });
 
+// A real table reaches this with 3+ seats when an AI wins a multi-way
+// all-in pot over both humans - set the end state directly rather than
+// fighting the deal for a specific outcome, since _maybeDealNext only ever
+// looks at seats/stacks, never how they got that way.
+test('busting every human seat at once skips the between-hands grace period entirely', () => {
+  const room = new Room({random: seeded(22)});
+  const owner = room.create('Alice', {seatCount: 2}, 0);
+  const bob = room.hello(null, 'Bob', 0);
+  room.start(owner.token, 0);
+  while (!room.table.result) {
+    const actorToken = room.table.actor === 0 ? owner.token : bob.token;
+    const legal = room.table.legalActions(room.table.actor);
+    room.act(actorToken, {handNumber: room.table.handNumber, action: legal.check ? 'check' : legal.call ? 'call' : 'fold'}, 0);
+  }
+  room.table.players.forEach((p) => { p.stack = 0; });
+  const handAfterFirst = room.table.handNumber;
+  room.tick(1); // nowhere near BETWEEN_HANDS_MS - nobody left could ever click ready
+  assert.equal(room.table.handNumber, handAfterFirst + 1, 'with no funded human seat left, the next hand must deal immediately rather than stall the full grace period');
+});
+
 test('blinds still progress hand over hand by the chosen table schedule', () => {
   const room = new Room({random: seeded(13)});
   const owner = room.create('Alice', {seatCount: 2, tableKind: 'rising'}, 0);
