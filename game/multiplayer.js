@@ -59,6 +59,23 @@
   RemoteTable.prototype.legalActions = function () {
     return this.legal || {fold: false, check: false, call: 0, canRaise: false, minRaiseTo: 0, maxRaiseTo: 0, allIn: 0, allInCanRaise: false};
   };
+  // A disconnect/reconnect mid-hand only ever triggers a room-level 'lobby'
+  // broadcast (see worker/room.js's disconnected()/hello()), never a fresh
+  // 'events' snapshot - so without this, an opponent's connected flag on
+  // this.players would sit stale until whatever 'events' message happens to
+  // come next (the following action, or even the next hand). msg.seats is
+  // in the server's own absolute seat numbering (everyone gets the same
+  // broadcast), so it has to be rotated the same way the server itself
+  // rotates 'events' snapshots before it lines up with this.players.
+  RemoteTable.prototype._applyPresence = function (seats, mySeat) {
+    if (!seats || mySeat === null || mySeat === undefined || !this.players.length) return;
+    var n = this.players.length, self = this;
+    seats.forEach(function (s) {
+      if (!s || s.kind !== 'human') return;
+      var local = ((s.seat - mySeat) % n + n) % n;
+      if (self.players[local]) self.players[local].connected = s.connected;
+    });
+  };
   RemoteTable.prototype._applyEventsMessage = function (msg) {
     if (msg.snapshot.handNumber !== this.handNumber) this.events = [];
     this.events = (msg.from === this.events.length) ? this.events.concat(msg.events) : msg.events.slice();
@@ -119,7 +136,11 @@
     if (!msg || typeof msg.t !== 'string') return;
     if (msg.t === 'error') { this._emit('error', msg); return; }
     if (msg.t === 'welcome') { this.seat = msg.seat; this.token = msg.token; this.owner = !!msg.owner; this._emit('welcome', msg); return; }
-    if (msg.t === 'lobby') { this._emit('lobby', msg); return; }
+    // Once a hand is already underway, a 'lobby' message is purely a
+    // presence update (see RemoteTable.prototype._applyPresence's doc
+    // comment above) - fold it into the live table instead of treating it
+    // as the pre-game roster screen app.js's own 'lobby' handler renders.
+    if (msg.t === 'lobby') { if (this.started) this.table._applyPresence(msg.seats, this.seat); this._emit('lobby', msg); return; }
     if (msg.t === 'events') { this.started = true; this.table._applyEventsMessage(msg); this._settleAll(true); this._emit('events', msg); return; }
     // Not a poker.js event - a room-level notice sent alongside (just before)
     // the fresh game's own 'events' message, never folded into table.events.
