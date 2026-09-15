@@ -1,5 +1,22 @@
 # Changelog
 
+## v1.6.7 — 2026-09-15
+
+Fixes a busted player getting permanently stuck once their game ended
+and reset.
+
+**Save compatibility:** unaffected.
+
+### Fixed
+
+- **A player who busted out of a game no longer freezes for good once
+  that game ends.** Everyone else kept playing normally, but the
+  busted seat's screen stayed stuck with no cards and no way to act,
+  even once a fresh game refunded them and it became their turn
+  again. The table itself was never the problem - reconnecting to a
+  frozen seat now just isn't necessary, since it never gets stuck in
+  the first place.
+
 ## v1.6.6 — 2026-09-15
 
 Small online-play polish: sharing a room code and noticing a dropped
