@@ -1,5 +1,25 @@
 # Changelog
 
+## v1.6.10 — 2026-09-15
+
+Small clarity touches to the hand review screen and the hand-strength
+panel.
+
+**Save compatibility:** unaffected.
+
+### Added
+
+- **Hand review now shows a small portrait next to each name**, in
+  both the showdown list and the pot-winner list, with a little more
+  breathing room between rows.
+
+### Changed
+
+- **"See your chances" now highlights across its whole panel on
+  hover**, not just the small pill - the hand name and subtitle above
+  it have always been part of the same clickable button, and now look
+  it too.
+
 ## v1.6.9 — 2026-09-15
 
 A visual fix for the phone/mobile web layout.
