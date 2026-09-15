@@ -44,7 +44,14 @@
    per-layout rules for .hand-peek>span:last-child. */
 .peek-cta{display:inline-flex;align-items:center;gap:6px;margin-top:8px;padding:4px 12px;border:1px solid #b49d6988;border-radius:999px;background:#f3deb914;color:#ecc98d!important;font-weight:bold;line-height:1.35}
 .peek-cta b{margin-left:0;color:#f0c580}
-.hand-peek:hover .peek-cta{background:#f3deb926;border-color:#d8bd86}
+/* The pill alone used to be the only part that visibly reacted to a hover,
+   even though the whole panel (the hand name and "Pair uses your cards"
+   line too) has always been one clickable button - so a pointer resting
+   just above the pill looked and felt inert. A wash across the full panel
+   makes the real hitbox obvious at a glance, not just the pill inside it. */
+.hand-peek{border-radius:8px;transition:background .16s,box-shadow .16s}
+.hand-peek:hover,.hand-peek:focus-visible{background:#5a4530a8;box-shadow:0 0 0 1px #d8bd8677}
+.hand-peek:hover .peek-cta,.hand-peek:focus-visible .peek-cta{background:#f3deb926;border-color:#d8bd86}
 /* The possibility rows are buttons; make that obvious on a pointer device. */
 .guide-row:hover:not(.current){background:#ffffff0d}
 .guide-row:active{background:#ffffff16}

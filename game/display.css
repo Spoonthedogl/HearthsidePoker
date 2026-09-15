@@ -24,8 +24,14 @@ select:focus-visible{outline:3px solid #a77534;outline-offset:3px}
 #windowTools{position:fixed;top:0;left:50%;transform:translateX(-50%);z-index:200;display:flex;gap:1px;background:#261f19e8;border:1px solid #ac8c5266;border-top:0;border-radius:0 0 5px 5px;padding:2px 6px}#windowTools button{font:11px Georgia;color:#e4cda0;padding:4px 9px}#windowTools button:hover{background:#ead2a52b}#windowTools.hidden{display:none}.scene-paused .gentle 
 #recap{width:660px;max-height:820px;overflow:auto}#recap h2{margin-bottom:20px}#recap section{border-bottom:1px solid #ad946955;padding:0 0 12px;margin:0 0 13px}#recap h3{font:13px 'Courier New';color:#79603c;margin:0 0 8px}#recap p{font-size:13px;line-height:1.4;margin:8px 0 0}.card.enter{animation-duration:calc(.42s * var(--pace,1))}
 .recap-showdown{background:#e1d2af55;border-radius:5px;padding:10px 12px}
-.recap-hand-row,.recap-pot-row{display:flex;align-items:center;gap:10px;padding:4px 0}
+.recap-hand-row,.recap-pot-row{display:flex;align-items:center;gap:10px;padding:7px 4px;border-bottom:1px solid #ad946930}
+.recap-hand-row:last-child,.recap-pot-row:last-child{border-bottom:0}
 .recap-hand-row .row-cards,.recap-pot-row .row-cards{margin:0}
+/* A cropped headshot from the seated sprite sheet already used at the table
+   (see portraitFor() in app.js) - background-size/position pick just the
+   top of the "playing" frame, zoomed and centered on the face, so a tiny
+   circle still reads as that character rather than a shrunk full body. */
+.recap-portrait{flex:0 0 34px;width:34px;height:34px;border-radius:50%;background-color:#00000014;border:1px solid #ad946955;background-repeat:no-repeat;image-rendering:pixelated;background-size:789% 313%;background-position:13% 0}
 .recap-hand-name{flex:0 0 92px;font:13px Georgia;color:#47503a;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .recap-hand-label{margin-left:auto;font:11px Georgia;color:#8a7756;white-space:nowrap}
 .recap-hand-row.winner{background:#d9c07f3d;border-radius:4px}

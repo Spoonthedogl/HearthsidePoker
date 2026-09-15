@@ -197,7 +197,8 @@ body.compact .example-slot .card .corner{font-size:21px}
 body.compact .example-slot .card .center-suit{font-size:40px}
 body.compact .example-slot small{font-size:15px}
 /* These all use the font shorthand, so each one needs saying again. */
-body.compact .recap-hand-row,body.compact .recap-pot-row{font-size:24px;gap:14px;padding:7px 0}
+body.compact .recap-hand-row,body.compact .recap-pot-row{font-size:24px;gap:14px;padding:12px 0}
+body.compact .recap-portrait{flex-basis:62px;width:62px;height:62px}
 body.compact .recap-hand-name{flex-basis:148px;font-size:24px}
 body.compact .recap-hand-label{font-size:21px}
 body.compact .recap-pot-row strong{font-size:25px}
