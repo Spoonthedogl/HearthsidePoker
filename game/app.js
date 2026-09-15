@@ -378,9 +378,14 @@
   (msg.standings||[]).forEach(function(row){var li=document.createElement('li');li.textContent=row.place+'. '+(row.seat===0?'You':row.name)+' — '+row.stack.toLocaleString()+' chips';standings.appendChild(li);});
   body.appendChild(standings);
   if(msg.cumulative&&msg.cumulative.length){
-   var h=document.createElement('h3');h.textContent='Session wins';body.appendChild(h);
+   var h=document.createElement('h3');h.textContent='Session totals';body.appendChild(h);
    var wins=document.createElement('ul');wins.className='log-list';
-   msg.cumulative.forEach(function(row){var li=document.createElement('li');li.textContent=(row.seat===0?'You':row.name)+' — '+row.wins+(row.wins===1?' win':' wins');wins.appendChild(li);});
+   // Net chips are a running total across every game this room has played,
+   // not a balance carried into the next one - every game still starts
+   // everyone fresh at 500, so a bad game is never a deeper hole to climb
+   // out of. This is what makes a game worth playing even once the win is
+   // already decided: profit over the whole session still moves.
+   msg.cumulative.forEach(function(row){var li=document.createElement('li');var netChips=row.netChips||0;li.textContent=(row.seat===0?'You':row.name)+' — '+row.wins+(row.wins===1?' win':' wins')+' · '+(netChips>=0?'+':'')+netChips.toLocaleString()+' chips';wins.appendChild(li);});
    body.appendChild(wins);
   }
  }

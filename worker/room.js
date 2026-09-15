@@ -104,6 +104,7 @@
     this.handsPlayed = 0; // hands played so far in the CURRENT game; feeds HearthTables.blinds() and resets to 0 every new game
     this.gamesPlayed = 0; // which game this room is on; 0 until start(), 1 for the whole first game, etc.
     this.cumulativeWins = {}; // token -> games that seat has won, for this room's whole lifetime
+    this.cumulativeChips = {}; // token -> net chips (final stack minus the fresh 500) summed across every game this room has played
     this.bustOrder = []; // seat indices in the order they ran out of chips this game, for standings tie-breaks; cleared every new game
     this.deadlineAt = null;
     this.handEndedAt = null;
@@ -330,12 +331,12 @@
     var rotatedStandings = standings.map(function (row) {
       return {seat: localize(row.seat), place: row.place, stack: row.stack, name: names[row.seat]};
     }).sort(function (a, b) { return a.place - b.place; });
-    // Cumulative wins are a human-only, bragging-rights tally for the people
-    // actually in the room this session - not a persistent account, and not
-    // meaningful for a companion seat that has no token of its own.
+    // Cumulative wins/chips are a human-only, bragging-rights tally for the
+    // people actually in the room this session - not a persistent account,
+    // and not meaningful for a companion seat that has no token of its own.
     var cumulative = this.seats.map(function (s, i) {
-      return s && {seat: localize(i), name: s.name, wins: self.cumulativeWins[s.token] || 0};
-    }).filter(Boolean).sort(function (a, b) { return b.wins - a.wins; });
+      return s && {seat: localize(i), name: s.name, wins: self.cumulativeWins[s.token] || 0, netChips: self.cumulativeChips[s.token] || 0};
+    }).filter(Boolean).sort(function (a, b) { return b.wins - a.wins || b.netChips - a.netChips; });
     return {t: 'game-over', gamesPlayed: this.gamesPlayed, standings: rotatedStandings, cumulative: cumulative};
   };
 
@@ -394,6 +395,15 @@
       var standings = this._standings();
       var winnerSeat = this.seats[standings[0].seat];
       if (winnerSeat) this.cumulativeWins[winnerSeat.token] = (this.cumulativeWins[winnerSeat.token] || 0) + 1;
+      // Every seat starts each game at exactly STARTING_STACK (_startNewGame
+      // resets it, and start() deals the very first game the same way), so
+      // this game's own final stack minus that fresh 500 is this game's net
+      // result for that seat - summed here, before _startNewGame() below
+      // overwrites table.players[i].stack back to 500 for the next one.
+      this.seats.forEach(function (s, i) {
+        if (!s) return;
+        self.cumulativeChips[s.token] = (self.cumulativeChips[s.token] || 0) + (self.table.players[i].stack - STARTING_STACK);
+      });
       var out = this._broadcastGameOver(standings);
       this._startNewGame(now);
       return out.concat(this._broadcastFrom(0));
@@ -473,7 +483,7 @@
       phase: this.phase, seatCount: this.seatCount, tableKind: this.tableKind, difficulty: this.difficulty, handsPerGame: this.handsPerGame,
       seats: this.seats.map(function (s) { return s ? {token: s.token, name: s.name, avatar: s.avatar} : null; }),
       seatAvatar: this.seatAvatar, ownerToken: this.ownerToken, handsPlayed: this.handsPlayed,
-      gamesPlayed: this.gamesPlayed, cumulativeWins: this.cumulativeWins, bustOrder: this.bustOrder,
+      gamesPlayed: this.gamesPlayed, cumulativeWins: this.cumulativeWins, cumulativeChips: this.cumulativeChips, bustOrder: this.bustOrder,
       tablePack: this.table ? HearthSession.pack(this.table, fullyCaughtUpUI(this.table)) : null
     };
   };
@@ -486,7 +496,7 @@
     // yet, and each seat's own next hello() will mark it connected again.
     room.seats = data.seats.map(function (s) { return s ? {token: s.token, name: s.name, connected: false, avatar: s.avatar || null} : null; });
     room.seatAvatar = data.seatAvatar; room.ownerToken = data.ownerToken; room.handsPlayed = data.handsPlayed;
-    room.gamesPlayed = data.gamesPlayed || 0; room.cumulativeWins = data.cumulativeWins || {}; room.bustOrder = data.bustOrder || [];
+    room.gamesPlayed = data.gamesPlayed || 0; room.cumulativeWins = data.cumulativeWins || {}; room.cumulativeChips = data.cumulativeChips || {}; room.bustOrder = data.bustOrder || [];
     room.seats.forEach(function (s, i) { if (s) room.tokenSeat.set(s.token, i); });
     if (data.tablePack) {
       var table = HearthSession.unpack(data.tablePack).table;
