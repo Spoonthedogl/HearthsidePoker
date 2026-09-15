@@ -9,6 +9,10 @@ body.compact button{-webkit-tap-highlight-color:transparent}
 /* The room is a landscape painting; cover-cropping it to portrait throws away
    the hearth. Fit it to the width as a top band and fade into the dark. */
 body.compact .room{background-size:100% auto;background-position:center top;background-repeat:no-repeat}
+/* .room-crate is pinned to the crate's spot under the wide layout's
+   cover-fit background; the portrait fit above repositions that same
+   background entirely, so the fixed coordinates no longer line up. */
+body.compact .room-crate{display:none}
 body.compact .shade{background:linear-gradient(#160f0c99,transparent 11%,transparent 22%,#191110e0 36%,#191110 47%);box-shadow:none}
 /* The room art is fitted to the width here, so it is drawn at about half its
    1440px desk size (768/1440). The windowsill cat is positioned in desk pixels,

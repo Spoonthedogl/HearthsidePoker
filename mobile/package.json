@@ -1,6 +1,6 @@
 {
   "name": "hearthside-mobile",
-  "version": "1.6.13",
+  "version": "1.6.14",
   "private": true,
   "description": "Capacitor wrapper that packages the Hearthside web game as an installable Android app.",
   "type": "module",
