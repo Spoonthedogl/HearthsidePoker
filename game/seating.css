@@ -9,6 +9,11 @@
 #stage .seated-companion .nameplate strong{font-size:12px;letter-spacing:1.3px}
 #stage .seated-companion .bank{font-size:12px;margin-top:5px}
 #stage .seated-companion .persona{display:none}
+/* A companion's play-style is otherwise only in a `title` tooltip, which a
+   touch device never shows - tapping the nameplate (see roster.js) reveals
+   this instead, for touch and mouse users alike. */
+#stage .seated-companion .persona.show{display:block;font:10px/1.35 'Courier New';letter-spacing:.4px;color:#cdbfa0;margin-top:5px;white-space:normal;cursor:pointer}
+#stage .seated-companion .nameplate{cursor:pointer}
 #stage .seated-companion .position-markers{left:-25px;top:0;gap:2px}
 #stage .seated-companion .position-markers span{width:23px;height:23px;font-size:9px}
 #stage .seated-companion .opponent-cards{left:var(--cards-x);top:var(--cards-y);gap:6px;transform:rotate(0);pointer-events:auto}

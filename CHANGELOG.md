@@ -1,5 +1,40 @@
 # Changelog
 
+## v1.6.17 — 2026-09-15
+
+A pre-release pass fixing a critical online-play bug plus a round of
+responsive, touch and keyboard-shortcut issues found in a full audit.
+
+**Save compatibility:** unaffected.
+
+### Fixed
+
+- **A dropped online connection could permanently freeze the game.**
+  After reconnection gave up, the table was left showing disabled
+  Fold/Check/Raise buttons with no way forward except reloading the
+  page. It now clearly says the connection was lost and offers a
+  "Leave room" button to get back to the main screen.
+- **Tablets in portrait were stuck with a small, letterboxed desktop
+  layout.** A gap in the responsive breakpoints meant common tablet
+  widths (roughly 560–820px) never switched to the phone-friendly
+  layout. A genuine desktop browser window resized narrow and tall
+  now also reflows correctly, without affecting how a phone's
+  on-screen keyboard is already handled.
+- **Holding the H key spammed the hand journal open and shut.** It
+  now opens or closes once per press, like every other shortcut.
+- **The online room-code "Copy" button was unstyled and easy to
+  miss**, especially on a touchscreen. It now has a proper touch
+  target consistent with the rest of the game.
+- **Several checkboxes (Settings, companion selection) were too
+  small to comfortably tap on a phone.** They're now a comfortable
+  size on the mobile layout without looking oversized elsewhere.
+- **A companion's play-style was only visible on desktop hover.**
+  Tapping (or clicking) their nameplate now shows it directly.
+- **Rapidly tapping Create/Join/Rejoin room could open two competing
+  connections** and leave the game pointed at the wrong room. A
+  second tap is now ignored until the first attempt finishes, and
+  retrying after a failed attempt still works normally.
+
 ## v1.6.16 — 2026-09-15
 
 A second follow-up to the candle-chest fix.
