@@ -1,5 +1,20 @@
 # Changelog
 
+## v1.6.14 — 2026-09-15
+
+Another table polish fix, following up on v1.6.13.
+
+**Save compatibility:** unaffected.
+
+### Fixed
+
+- **A companion seated near the candle chest on the right side of the
+  room no longer appears to clip in front of it.** That chest sits
+  closer to the camera than the table, so a seated companion should
+  read as behind it - the room's background couldn't express that
+  depth on its own, so the chest is now a separate layer that draws
+  in front of companions, matching every other seat count.
+
 ## v1.6.13 — 2026-09-15
 
 Two visual polish fixes for the table.
