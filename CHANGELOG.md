@@ -1,5 +1,20 @@
 # Changelog
 
+## v1.6.11 — 2026-09-15
+
+Fixes the hand-strength panel only being clickable in a thin sliver
+of its actual area.
+
+**Save compatibility:** unaffected.
+
+### Fixed
+
+- **"See your chances" now responds across its whole panel, not just
+  a thin strip at the top.** The row of turn info and action buttons
+  sitting just below it was invisibly overlapping almost the entire
+  panel and quietly swallowing clicks meant for it - fixed so the
+  panel's real interactive area now matches what it looks like.
+
 ## v1.6.10 — 2026-09-15
 
 Small clarity touches to the hand review screen and the hand-strength
