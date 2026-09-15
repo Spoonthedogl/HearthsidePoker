@@ -1,5 +1,24 @@
 # Changelog
 
+## v1.6.5 — 2026-09-15
+
+Online play now runs in fixed-length games, so a bust never means sitting
+around with nothing to do for the rest of the night.
+
+**Save compatibility:** unaffected.
+
+### Added
+
+- **Online rooms now play a fixed-length game** (7 hands by default,
+  choose 3–15 when creating a room) instead of one endless table. Bust
+  out and you sit out the rest of that game only — everyone is refunded
+  and dealt straight into a fresh game the moment it ends.
+- **A game also ends early** the instant only one player still has
+  chips, rather than playing out empty hands.
+- **A standings screen** appears at the end of every game, ranking
+  everyone by final chips (or how long they lasted, if they busted),
+  alongside a running win count for the room's players this session.
+
 ## v1.6.4 — 2026-09-15
 
 Fixes a table that could stall forever once too many players busted.
