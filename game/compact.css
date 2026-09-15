@@ -158,7 +158,9 @@ body.compact .settings-tabs{display:none}
 body.compact #displayPane{display:none!important}
 body.compact #soundPane{display:block!important}
 body.compact .check-label,body.compact .small-modal .check-label{font-size:24px}
-body.compact .check-label input{width:28px;height:28px}
+body.compact .check-label input{width:40px;height:40px}
+body.compact #rosterChoices input{width:32px;height:32px;margin-top:0}
+body.compact #onlineCopyCode{font-size:19px;padding:15px 20px;margin-left:14px;border-radius:5px}
 body.compact .pace-note,body.compact .quality-note{font-size:21px;line-height:1.6}
 body.compact .display-actual,body.compact #displayNote,body.compact #saveStatus,body.compact #rosterStatus{font-size:21px}
 body.compact .roster-choice{font-size:24px}
