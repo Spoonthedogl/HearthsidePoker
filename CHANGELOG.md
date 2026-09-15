@@ -1,5 +1,25 @@
 # Changelog
 
+## v1.6.12 — 2026-09-15
+
+A round of fixes from a code review of recent online-play changes:
+mostly small correctness edge cases in how a game's standings are
+decided, plus a keyboard-navigation crash.
+
+**Save compatibility:** unaffected.
+
+### Fixed
+
+- **Pressing Tab while the "Game complete" standings screen is open
+  no longer throws an error and does nothing.** Keyboard navigation
+  through that screen now works like every other dialog in the game.
+- **A game that ends tied for first now credits every tied player a
+  win**, not just one of them.
+- **Two players who bust in the very same hand now genuinely tie in
+  the standings**, instead of one arbitrarily outranking the other.
+- A rare server-restart edge case that could mislabel a resumed
+  online game as "Game 0" has been closed.
+
 ## v1.6.11 — 2026-09-15
 
 Fixes the hand-strength panel only being clickable in a thin sliver
