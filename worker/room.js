@@ -373,7 +373,16 @@
     var connectedHumans = this.seats.filter(function (s, i) { return s && s.connected && self.table.players[i].stack > 0; });
     var allReady = connectedHumans.length > 0 && connectedHumans.every(function (s) { return this.readySeats.has(this.tokenSeat.get(s.token)); }, this);
     var timedOut = this.handEndedAt !== null && now - this.handEndedAt >= BETWEEN_HANDS_MS;
-    if (!allReady && !timedOut) return [];
+    // If every human seat that exists - connected or not - already busted
+    // this game, there is nobody left who could ever click "ready", so the
+    // full between-hands grace period would just be a dead ~20s stall with
+    // nothing visibly happening (reported as "a long delay [that] could
+    // cause some players to quit"). A human seat that's merely disconnected
+    // right now still has real chips and still gets its normal chance to
+    // reconnect before the game moves on without it - only skip the grace
+    // period when waiting genuinely cannot accomplish anything.
+    var noFundedHumanLeft = !this.seats.some(function (s, i) { return s && self.table.players[i].stack > 0; });
+    if (!allReady && !timedOut && !noFundedHumanLeft) return [];
     this.readySeats.clear();
     this._recordBusts();
     this.handsPlayed++;
