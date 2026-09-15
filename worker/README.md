@@ -83,8 +83,13 @@ localStorage.setItem('hearthside-server', 'ws://127.0.0.1:8787');
   fund. Instead they play a fixed-length game (7 hands by default, 3–20
   configurable) — a bust just means sitting out the rest of that game, not
   the room. A standings screen ranks everyone at the end (by final chips, or
-  how long a busted seat lasted) and tracks a running win count for the
-  room's players, then every seat is refunded into a fresh game.
+  how long a busted seat lasted) and tracks a running win count *and* net
+  chips for the room's players across every game played this session (every
+  game still starts everyone at a fresh 500, so no lead ever carries over),
+  then every seat is refunded into a fresh game. If every human seat busts
+  in the same hand, the next one deals immediately rather than waiting out
+  the between-hands grace period meant for a slow human to click "ready" —
+  nobody in that state has a "ready" click to make.
 
 ## What v1 does not do yet
 
