@@ -105,7 +105,7 @@
     this.gamesPlayed = 0; // which game this room is on; 0 until start(), 1 for the whole first game, etc.
     this.cumulativeWins = {}; // token -> games that seat has won, for this room's whole lifetime
     this.cumulativeChips = {}; // token -> net chips (final stack minus the fresh 500) summed across every game this room has played
-    this.bustOrder = []; // seat indices in the order they ran out of chips this game, for standings tie-breaks; cleared every new game
+    this.bustOrder = []; // groups of seat indices, one group per hand that busted anyone, in the order those hands happened this game; cleared every new game
     this.deadlineAt = null;
     this.handEndedAt = null;
     this.readySeats = new Set();
@@ -296,38 +296,56 @@
     return {ok: true, out: this._broadcastFrom(fromEvent)};
   };
 
+  // bustOrder holds one entry per hand that busted anyone at all, each entry
+  // the list of seats that busted together in that hand - not a flat seat
+  // list, since two seats going out in the very same all-in have no real
+  // "who lasted longer" between them and should tie, not be split by
+  // whatever order table.players happened to iterate them in.
+  Room.prototype._bustGroup = function (seat) {
+    for (var g = 0; g < this.bustOrder.length; g++) if (this.bustOrder[g].indexOf(seat) >= 0) return g;
+    return -1;
+  };
+
   // Seat indices ranked best-to-worst for the game that just ended: still-
   // funded seats first (more chips first), then busted seats in reverse
-  // bust order (whoever lasted longer placed higher). Ties among never-
-  // busted seats with equal stacks are left as ties (stable order).
+  // bust order (whoever lasted longer placed higher). Ties - among never-
+  // busted seats with equal stacks, or seats that busted in the same hand -
+  // share a place, and the seat after them skips ahead accordingly.
   Room.prototype._standings = function () {
     var self = this;
-    var seats = this.table.players.map(function (p, i) { return i; });
-    seats.sort(function (a, b) {
+    var compare = function (a, b) {
       var pa = self.table.players[a], pb = self.table.players[b];
       if (pa.stack !== pb.stack) return pb.stack - pa.stack;
-      var ba = self.bustOrder.indexOf(a), bb = self.bustOrder.indexOf(b);
+      var ba = self._bustGroup(a), bb = self._bustGroup(b);
       if (ba < 0 && bb < 0) return 0;
       if (ba < 0) return -1;
       if (bb < 0) return 1;
       return bb - ba;
+    };
+    var seats = this.table.players.map(function (p, i) { return i; });
+    seats.sort(compare);
+    var out = [], place = 0;
+    seats.forEach(function (seat, i) {
+      if (i === 0 || compare(seats[i - 1], seat) !== 0) place = i + 1;
+      out.push({seat: seat, place: place, stack: self.table.players[seat].stack});
     });
-    return seats.map(function (seat, i) { return {seat: seat, place: i + 1, stack: self.table.players[seat].stack}; });
+    return out;
   };
 
   // Called every time a hand concludes, before anything about the next hand
   // or a new game is decided - the one moment this game's stack snapshot is
   // final and worth checking for a seat that just ran out.
   Room.prototype._recordBusts = function () {
-    var self = this;
+    var self = this, newlyBusted = [];
     this.table.players.forEach(function (p, i) {
-      if (p.stack === 0 && self.bustOrder.indexOf(i) < 0) self.bustOrder.push(i);
+      if (p.stack === 0 && self._bustGroup(i) < 0) newlyBusted.push(i);
     });
+    if (newlyBusted.length) this.bustOrder.push(newlyBusted);
   };
 
   Room.prototype._gameOverMessageFor = function (viewerSeat, standings) {
     var self = this, seatCount = this.seatCount, names = this._names();
-    var localize = function (seat) { return viewerSeat === null || viewerSeat === undefined ? seat : ((seat - viewerSeat) % seatCount + seatCount) % seatCount; };
+    var localize = function (seat) { return HearthRoomView.rotateId(seat, viewerSeat, seatCount); };
     var rotatedStandings = standings.map(function (row) {
       return {seat: localize(row.seat), place: row.place, stack: row.stack, name: names[row.seat]};
     }).sort(function (a, b) { return a.place - b.place; });
@@ -393,8 +411,12 @@
     // nobody but the winner can do anything in.
     if (this.handsPlayed >= this.handsPerGame || fundedNow < 2) {
       var standings = this._standings();
-      var winnerSeat = this.seats[standings[0].seat];
-      if (winnerSeat) this.cumulativeWins[winnerSeat.token] = (this.cumulativeWins[winnerSeat.token] || 0) + 1;
+      // place, not array position, decides who's credited - two seats can
+      // genuinely tie for first (equal stacks, neither ever busted).
+      standings.filter(function (row) { return row.place === standings[0].place; }).forEach(function (row) {
+        var winnerSeat = self.seats[row.seat];
+        if (winnerSeat) self.cumulativeWins[winnerSeat.token] = (self.cumulativeWins[winnerSeat.token] || 0) + 1;
+      });
       // Every seat starts each game at exactly STARTING_STACK (_startNewGame
       // resets it, and start() deals the very first game the same way), so
       // this game's own final stack minus that fresh 500 is this game's net
@@ -410,7 +432,10 @@
     }
     var blinds = HearthTables.blinds(this.tableKind, this.handsPlayed);
     this.table.smallBlind = blinds.small; this.table.bigBlind = blinds.big;
-    if (!this.table.newHand()) return this._broadcastFrom(this.table.events.length); // guarded above by fundedNow; kept as a safety net
+    // fundedNow >= 2 already holds here (the branch above returns otherwise),
+    // which is exactly newHand()'s own only failure condition - it cannot
+    // refuse.
+    this.table.newHand();
     driveAI(this.table);
     this._armTurnClock(now);
     return this._broadcastFrom(0);
@@ -496,7 +521,11 @@
     // yet, and each seat's own next hello() will mark it connected again.
     room.seats = data.seats.map(function (s) { return s ? {token: s.token, name: s.name, connected: false, avatar: s.avatar || null} : null; });
     room.seatAvatar = data.seatAvatar; room.ownerToken = data.ownerToken; room.handsPlayed = data.handsPlayed;
-    room.gamesPlayed = data.gamesPlayed || 0; room.cumulativeWins = data.cumulativeWins || {}; room.cumulativeChips = data.cumulativeChips || {}; room.bustOrder = data.bustOrder || [];
+    // A save from before gamesPlayed existed has no such field, but a room
+    // already in `playing` phase is necessarily on at least its first game -
+    // 0 would misreport "Game 0 complete" the moment this game ends.
+    room.gamesPlayed = data.gamesPlayed || (data.phase === 'playing' ? 1 : 0);
+    room.cumulativeWins = data.cumulativeWins || {}; room.cumulativeChips = data.cumulativeChips || {}; room.bustOrder = data.bustOrder || [];
     room.seats.forEach(function (s, i) { if (s) room.tokenSeat.set(s.token, i); });
     if (data.tablePack) {
       var table = HearthSession.unpack(data.tablePack).table;
