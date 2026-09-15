@@ -167,10 +167,24 @@
  // doesn't need any art of its own. "You" has no seated sprite in single-
  // player (no character represents the human at the table), so that slot
  // is left as an empty frame rather than showing a made-up avatar.
+ // Each character's face sits at a different spot within the shared
+ // 724x724 "playing" frame - a fox's face centers very differently than a
+ // crocodile's long snout held high, or an axolotl's small face held low -
+ // so one fixed crop can only ever center one of them. x/y are the
+ // fraction of the frame where that character's own face actually sits;
+ // PORTRAIT_ZOOM is the shared zoom level (how much of the frame's width/
+ // height the little circle shows) once centered on that point.
+ var PORTRAIT_ZOOM=.4;
+ var PORTRAIT_FOCUS={juniper:{x:.52,y:.16},luma:{x:.58,y:.2},moss:{x:.43,y:.2},clipper:{x:.51,y:.12},mur:{x:.55,y:.2},baron:{x:.58,y:.15}};
  function portraitFor(name){
   var el=document.createElement('span');el.className='recap-portrait';
   var c=name!=='You'&&HearthRoster.all.find(function(r){return r.name===name;});
-  if(c)el.style.backgroundImage='url("'+HearthRoster.spriteUrl(c.asset)+'")';
+  if(c){
+   el.style.backgroundImage='url("'+HearthRoster.spriteUrl(c.asset)+'")';
+   var focus=PORTRAIT_FOCUS[c.asset]||{x:.5,y:.16};
+   el.style.backgroundSize=(300/PORTRAIT_ZOOM)+'% '+(100/PORTRAIT_ZOOM)+'%';
+   el.style.backgroundPosition=(100*(.5*PORTRAIT_ZOOM-focus.x)/(PORTRAIT_ZOOM-3))+'% '+(100*(.5*PORTRAIT_ZOOM-focus.y)/(PORTRAIT_ZOOM-1))+'%';
+  }
   return el;
  }
  function renderRecap(){var busted=table.players[0].stack===0;$('recapNextHand').textContent=eveningOver()?'Settle up ↗':busted?'Rebuy '+table.startingStack+' chips ↗':'Deal next hand ↗';var target=$('recapContent');target.innerHTML='';target.scrollTop=0;var result=table.result;

@@ -27,11 +27,10 @@ select:focus-visible{outline:3px solid #a77534;outline-offset:3px}
 .recap-hand-row,.recap-pot-row{display:flex;align-items:center;gap:10px;padding:7px 4px;border-bottom:1px solid #ad946930}
 .recap-hand-row:last-child,.recap-pot-row:last-child{border-bottom:0}
 .recap-hand-row .row-cards,.recap-pot-row .row-cards{margin:0}
-/* A cropped headshot from the seated sprite sheet already used at the table
-   (see portraitFor() in app.js) - background-size/position pick just the
-   top of the "playing" frame, zoomed and centered on the face, so a tiny
-   circle still reads as that character rather than a shrunk full body. */
-.recap-portrait{flex:0 0 34px;width:34px;height:34px;border-radius:50%;background-color:#00000014;border:1px solid #ad946955;background-repeat:no-repeat;image-rendering:pixelated;background-size:789% 313%;background-position:13% 0}
+/* A cropped headshot from the seated sprite sheet already used at the table.
+   portraitFor() in app.js sets background-size/position per character, since
+   each one's face sits at a different spot in the shared frame. */
+.recap-portrait{flex:0 0 34px;width:34px;height:34px;border-radius:50%;background-color:#00000014;border:1px solid #ad946955;background-repeat:no-repeat;image-rendering:pixelated}
 .recap-hand-name{flex:0 0 92px;font:13px Georgia;color:#47503a;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .recap-hand-label{margin-left:auto;font:11px Georgia;color:#8a7756;white-space:nowrap}
 .recap-hand-row.winner{background:#d9c07f3d;border-radius:4px}
