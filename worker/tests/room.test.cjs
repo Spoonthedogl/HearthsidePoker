@@ -332,10 +332,49 @@ test('standings rank funded seats by stack, then busted seats by how long they l
   room.table.players[1].stack = 300;
   room.table.players[2].stack = 0;
   room.table.players[3].stack = 0;
-  room.bustOrder = [2, 3]; // seat 2 busted first; seat 3 lasted longer
+  room.bustOrder = [[2], [3]]; // seat 2 busted first (its own hand); seat 3 lasted longer (a later hand)
   const standings = room._standings();
   assert.deepEqual(standings.map((s) => s.seat), [0, 1, 3, 2]);
   assert.deepEqual(standings.map((s) => s.place), [1, 2, 3, 4]);
+});
+
+test('two seats that bust in the very same hand tie for placement, rather than being split by iteration order', () => {
+  const room = new Room({random: seeded(23)});
+  room.create('Alice', {seatCount: 3}, 0);
+  room.hello(null, 'Bob', 0);
+  room.hello(null, 'Carol', 0);
+  room.start(room.ownerToken, 0);
+  room.table.players[0].stack = 1000;
+  room.table.players[1].stack = 0;
+  room.table.players[2].stack = 0;
+  room._recordBusts(); // seats 1 and 2 busted together, in this same hand
+  const standings = room._standings();
+  assert.deepEqual(standings.map((s) => s.seat).sort(), [0, 1, 2]);
+  const seat1 = standings.find((s) => s.seat === 1), seat2 = standings.find((s) => s.seat === 2);
+  assert.equal(seat1.place, seat2.place, 'seats busted in the same hand must tie for placement');
+  const seat0 = standings.find((s) => s.seat === 0);
+  assert.equal(seat0.place, 1);
+  assert.equal(seat1.place, 2, 'the tied pair takes the next place after the sole leader');
+});
+
+test('a game that ends tied for first credits every tied seat a win, not just one', () => {
+  const room = new Room({random: seeded(24)});
+  const owner = room.create('Alice', {seatCount: 2, handsPerGame: 3}, 0);
+  const bob = room.hello(null, 'Bob', 0);
+  room.start(owner.token, 0);
+  for (let hand = 0; hand < 3; hand++) {
+    while (!room.table.result) {
+      const legal = room.table.legalActions(room.table.actor);
+      room.act(room.table.actor === 0 ? owner.token : bob.token, {handNumber: room.table.handNumber, action: legal.check ? 'check' : 'call'}, 0);
+    }
+    if (hand < 2) room.next(owner.token, 0), room.next(bob.token, 0);
+  }
+  // Force the exact tie the real deal may or may not have landed on - only
+  // the crediting logic at game-end is under test here.
+  room.table.players[0].stack = 500; room.table.players[1].stack = 500;
+  room.next(owner.token, 0); room.next(bob.token, 0);
+  assert.equal(room.cumulativeWins[owner.token], 1, "the owner's tied share of the win must still be credited");
+  assert.equal(room.cumulativeWins[bob.token], 1, "Bob's tied share of the win must still be credited");
 });
 
 test('cumulative wins and net chips accumulate across multiple games played in the same room', () => {
@@ -425,6 +464,12 @@ test('serialize/fromSerialized survives a mid-hand restart with humanSeats, stac
   room.start(owner.token, 1000);
   const actorToken = room.table.actor === 0 ? owner.token : (room.table.actor === 1 ? bob.token : null);
   if (actorToken) room.act(actorToken, {handNumber: 1, action: room.table.legalActions(room.table.actor).check ? 'check' : 'call'}, 1000);
+  // A room's session-lifetime bookkeeping - none of it tied to the hand in
+  // progress - must survive the round-trip exactly as well.
+  room.handsPerGame = 5; room.gamesPlayed = 2;
+  room.cumulativeWins = {[owner.token]: 1, [bob.token]: 1};
+  room.cumulativeChips = {[owner.token]: 120, [bob.token]: -120};
+  room.bustOrder = [[2]];
 
   const saved = JSON.parse(JSON.stringify(room.serialize()));
   const restored = Room.fromSerialized(saved, {random: seeded(31), now: () => 5000});
@@ -432,6 +477,11 @@ test('serialize/fromSerialized survives a mid-hand restart with humanSeats, stac
   assert.equal(restored.phase, 'playing');
   assert.equal(restored.seatCount, 3);
   assert.equal(restored.tableKind, 'rising');
+  assert.equal(restored.handsPerGame, 5);
+  assert.equal(restored.gamesPlayed, 2);
+  assert.deepEqual(restored.cumulativeWins, {[owner.token]: 1, [bob.token]: 1});
+  assert.deepEqual(restored.cumulativeChips, {[owner.token]: 120, [bob.token]: -120});
+  assert.deepEqual(restored.bustOrder, [[2]]);
   assert.deepEqual([...restored.table.humanSeats].sort(), [0, 1]);
   assert.equal(restored.table.handNumber, room.table.handNumber);
   assert.deepEqual(restored.table.players.map((p) => p.stack), room.table.players.map((p) => p.stack));
@@ -443,6 +493,18 @@ test('serialize/fromSerialized survives a mid-hand restart with humanSeats, stac
   let guard = 0;
   while (!restored.table.result && guard++ < 200) restored.tick(6000 + guard * TURN_MS_CONNECTED);
   assert(restored.table.result, 'a restored room must still be able to finish its hand');
+});
+
+test('restoring a save from before gamesPlayed existed defaults it to 1 for a room already playing, not 0', () => {
+  const room = new Room({random: seeded(34)});
+  const owner = room.create('Alice', {seatCount: 2}, 0);
+  room.hello(null, 'Bob', 0);
+  room.start(owner.token, 0);
+  const legacySave = room.serialize();
+  delete legacySave.gamesPlayed; delete legacySave.bustOrder; // as an old save would lack them entirely
+  const restored = Room.fromSerialized(JSON.parse(JSON.stringify(legacySave)), {random: seeded(35)});
+  assert.equal(restored.gamesPlayed, 1, 'a room already in `playing` phase is on at least its first game, never game 0');
+  assert.deepEqual(restored.bustOrder, []);
 });
 
 test('a room never started (still in the lobby) serializes and restores with no table at all', () => {

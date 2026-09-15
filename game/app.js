@@ -12,7 +12,7 @@
  var reconnecting=false,reconnectAttempts=0; // a dropped socket gets a few quiet retries before online play gives up; see the Online play block.
  var onlineHandNumber=0; // which hand driveOnline's local replay state (eventIndex, visibleSeats, ...) is caught up to; see the Online play block.
  var onlineRejoining=false; // true only while attempting to resume a saved session from a fresh page load; see the Online play block.
- var onlineDriving=false; // true only while a driveOnline() call is actually executing; see driveOnline's own guard and the 'events' handler below.
+ var onlineDrivingVersion=null; // the version currently owning a driveOnline() call, or null; see driveOnline's own guard and the 'events' handler below.
  var visibleSeats=table.players.map(function(p){return {stack:p.stack,bet:0,folded:false,allIn:false,lastAction:''};});
  var companions=new HearthCompanions({onChange:renderSpeech});
  var computation=new HearthComputation(),guidePending={},guideErrors={};
@@ -170,7 +170,7 @@
  function portraitFor(name){
   var el=document.createElement('span');el.className='recap-portrait';
   var c=name!=='You'&&HearthRoster.all.find(function(r){return r.name===name;});
-  if(c)el.style.backgroundImage='url("assets/'+c.asset+(['luma','clipper'].indexOf(c.asset)>=0?'-seated-v4.png':'-seated-v3.png')+'")';
+  if(c)el.style.backgroundImage='url("'+HearthRoster.spriteUrl(c.asset)+'")';
   return el;
  }
  function renderRecap(){var busted=table.players[0].stack===0;$('recapNextHand').textContent=eveningOver()?'Settle up ↗':busted?'Rebuy '+table.startingStack+' chips ↗':'Deal next hand ↗';var target=$('recapContent');target.innerHTML='';target.scrollTop=0;var result=table.result;
@@ -249,7 +249,7 @@
  $('journalBackdrop').addEventListener('click',function(){closeAll();});
  document.addEventListener('input',function(e){var id=e.target.id;if(id==='raiseRange')$('raiseNumber').value=e.target.value;if(id==='raiseNumber'&&$('raiseRange'))$('raiseRange').value=e.target.value;if(id==='masterVolume')audio.setMaster(Number(e.target.value)/100);if(id==='musicVolume')audio.setMusic(Number(e.target.value)/100);if(id==='ambienceVolume')audio.setAmbience(Number(e.target.value)/100);if(id==='effectsVolume')audio.setEffects(Number(e.target.value)/100);if(id==='reducedMotion'){$('stage').classList.toggle('gentle',e.target.checked);cat.tick(0,{gentle:e.target.checked,paused:paused(),hidden:document.hidden});}if(id==='fourColour')document.body.classList.toggle('four-colour',e.target.checked);if(id==='largeText')document.body.classList.toggle('large-text',e.target.checked);if(['masterVolume','musicVolume','ambienceVolume','effectsVolume','reducedMotion','fourColour','largeText'].indexOf(id)>=0)queueSettingsSave();});
  function syncSettings(){$('masterVolume').value=audio.getMaster()*100;$('effectsVolume').value=audio.getEffects()*100;$('musicVolume').value=audio.getMusic()*100;$('ambienceVolume').value=audio.getAmbience()*100;$('muteButton').textContent=audio.isMuted()?'Unmute sounds':'Mute all';$('gamePace').value=pace;saveSession();}
- document.addEventListener('keydown',function(e){if(e.key==='Escape'){e.preventDefault();if(e.repeat)return;if(paused())closeAll();else{if(raiseOpen)renderActions();syncSettings();openModal('settings');}return;}if(e.key==='Tab'&&paused()){var modal=['journal','settings','rules','confirmReset','recap','eveningClose','shelf','online'].map($).find(function(x){return !x.classList.contains('hidden');});var focusable=Array.from(modal.querySelectorAll('button:not(:disabled),input:not(:disabled),select:not(:disabled)')).filter(function(el){return el.getClientRects().length>0;});if(focusable.length){var first=focusable[0],last=focusable[focusable.length-1];if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus();}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus();}}return;}if(e.key==='Enter'&&e.target.id==='raiseNumber'){e.preventDefault();confirmRaise();return;}if(e.target.tagName==='INPUT'||e.target.tagName==='SELECT')return;if(e.key.toLowerCase()==='h'){e.preventDefault();if(!$('journal').classList.contains('hidden'))closeAll();else openJournal();}if(paused()||e.repeat)return;if(e.key.toLowerCase()==='c'&&started&&table.actor===0&&!busy)act(table.legalActions().check?'check':'call');if(e.key.toLowerCase()==='f')act('fold');});
+ document.addEventListener('keydown',function(e){if(e.key==='Escape'){e.preventDefault();if(e.repeat)return;if(paused())closeAll();else{if(raiseOpen)renderActions();syncSettings();openModal('settings');}return;}if(e.key==='Tab'&&paused()){var modal=['journal','settings','rules','confirmReset','recap','eveningClose','shelf','online','gameOver'].map($).find(function(x){return !x.classList.contains('hidden');});var focusable=Array.from(modal.querySelectorAll('button:not(:disabled),input:not(:disabled),select:not(:disabled)')).filter(function(el){return el.getClientRects().length>0;});if(focusable.length){var first=focusable[0],last=focusable[focusable.length-1];if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus();}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus();}}return;}if(e.key==='Enter'&&e.target.id==='raiseNumber'){e.preventDefault();confirmRaise();return;}if(e.target.tagName==='INPUT'||e.target.tagName==='SELECT')return;if(e.key.toLowerCase()==='h'){e.preventDefault();if(!$('journal').classList.contains('hidden'))closeAll();else openJournal();}if(paused()||e.repeat)return;if(e.key.toLowerCase()==='c'&&started&&table.actor===0&&!busy)act(table.legalActions().check?'check':'call');if(e.key.toLowerCase()==='f')act('fold');});
  var npcHoverTimes={},lastNpcSound=0;
  document.addEventListener('companion-hover',function(e){if(paused()||document.hidden)return;var now=performance.now(),key=e.detail.character,el=e.target;if(now-(npcHoverTimes[key]||-9999)<4000)return;npcHoverTimes[key]=now;el.classList.remove('hover-react');void el.offsetWidth;el.classList.add('hover-react');setTimeout(function(){el.classList.remove('hover-react');},1150);if(started&&now-lastNpcSound>750){audio.play('npc_'+key,{volume:.45,pan:Number(el.dataset.pan)});lastNpcSound=now;}});
  var lastHover=0,lastCardHover=0,pointerHovers=matchMedia('(hover:hover)').matches;
@@ -439,8 +439,12 @@
   // gets here first wins, and it makes no difference which one does, since
   // both would replay the exact same table.events from the exact same
   // eventIndex.
-  if(onlineDriving)return;onlineDriving=true;
-  try{await driveOnlineInner(t);}finally{onlineDriving=false;}
+  // Keyed by version, not a bare flag - a stale call left over from a
+  // superseded version (about to exit on its own next wait()/version check)
+  // must never block a fresh call for the CURRENT version. Only a second
+  // call for the exact same version is actually redundant.
+  if(onlineDrivingVersion===t)return;onlineDrivingVersion=t;
+  try{await driveOnlineInner(t);}finally{if(onlineDrivingVersion===t)onlineDrivingVersion=null;}
  }
  async function driveOnlineInner(t){
   // Each online hand's event log restarts from index 0 on the server (see
@@ -501,7 +505,7 @@
  // (e.g. once a new game refunds everyone). driveOnline's own guard makes
  // calling it here safe even when it's already running for some other
  // reason - this only ever does anything on the seat where it was needed.
- HearthOnline.on('events',function(){if(!online){onlineRejoining=false;beginOnlinePlay();}else if(reconnecting){reconnecting=false;reconnectAttempts=0;beginOnlinePlay();}else if(!onlineDriving)driveOnline(version);});
+ HearthOnline.on('events',function(){if(!online){onlineRejoining=false;beginOnlinePlay();}else if(reconnecting){reconnecting=false;reconnectAttempts=0;beginOnlinePlay();}else if(onlineDrivingVersion!==version)driveOnline(version);});
  // Not a poker.js event - a standalone notice the server sends alongside
  // (just before) the fresh game's own dealt-hand broadcast. Shown as its own
  // pausing modal rather than folded into driveOnline()'s replay: the new
