@@ -318,13 +318,14 @@ test('standings rank funded seats by stack, then busted seats by how long they l
   assert.deepEqual(standings.map((s) => s.place), [1, 2, 3, 4]);
 });
 
-test('cumulative wins accumulate across multiple games played in the same room', () => {
-  const room = new Room({random: seeded(23)});
+test('cumulative wins and net chips accumulate across multiple games played in the same room', () => {
+  const room = new Room({random: seeded(6)});
   // 3 is sanitizeConfig()'s own floor for handsPerGame - a real, deliberate
   // minimum, not a number this test should try to go below.
   const owner = room.create('Alice', {seatCount: 2, handsPerGame: 3}, 0);
   const bob = room.hello(null, 'Bob', 0);
   room.start(owner.token, 0);
+  let afterGame1;
   for (let hand = 0; hand < 6; hand++) { // 2 games of 3 hands each
     while (!room.table.result) {
       const actor = room.table.actor;
@@ -334,10 +335,17 @@ test('cumulative wins accumulate across multiple games played in the same room',
     }
     room.next(owner.token, 0);
     room.next(bob.token, 0);
+    if (hand === 2) afterGame1 = room.cumulativeChips[owner.token] || 0; // game 1 just ended
   }
   const totalWins = (room.cumulativeWins[owner.token] || 0) + (room.cumulativeWins[bob.token] || 0);
   assert.equal(totalWins, 2, 'each of the 2 completed games must credit exactly one winner');
   assert.equal(room.gamesPlayed, 3, 'two games completed means the room is now on its 3rd');
+  // Chips only ever move between these two seats in a heads-up room (the
+  // Jack-Two bonus, if it fired, is still just a transfer between the same
+  // two people) - so the running total across any number of complete games
+  // must always net to exactly zero between them.
+  assert.equal((room.cumulativeChips[owner.token] || 0) + (room.cumulativeChips[bob.token] || 0), 0, "one seat's net gain across all games must exactly mirror the other's net loss");
+  assert.notEqual(room.cumulativeChips[owner.token] || 0, afterGame1, "game 2's own result must still be added on top of game 1's, not overwrite or reset it");
 });
 
 // The highest-value test: script full sessions with a mix of human and AI
