@@ -39,6 +39,11 @@
     this.players = []; this.board = []; this.street = 'idle'; this.dealer = -1; this.actor = null;
     this.currentBet = 0; this.minRaise = 0; this.handNumber = 0; this.result = null; this.gameOver = false;
     this.smallBlind = 5; this.bigBlind = 10; this.startingStack = 500;
+    // Room-level (not poker.js-level) framing for a fixed-length online
+    // "game": which game this room is on, how many hands it runs, and which
+    // hand of the current game this is (1-indexed, for a "HAND X OF Y"
+    // display) - table.handNumber itself never resets across games.
+    this.gamesPlayed = 1; this.handsPerGame = 7; this.gameHand = 1;
     this.events = []; this.names = ['You']; this.legal = null; this.turnMs = null;
   }
   RemoteTable.prototype.snapshot = function () {
@@ -64,6 +69,9 @@
     if (msg.smallBlind !== undefined) this.smallBlind = msg.smallBlind;
     if (msg.bigBlind !== undefined) this.bigBlind = msg.bigBlind;
     if (msg.startingStack !== undefined) this.startingStack = msg.startingStack;
+    if (msg.gamesPlayed !== undefined) this.gamesPlayed = msg.gamesPlayed;
+    if (msg.handsPerGame !== undefined) this.handsPerGame = msg.handsPerGame;
+    if (msg.gameHand !== undefined) this.gameHand = msg.gameHand;
     if (msg.names) this.names = msg.names;
     this.legal = msg.legal || null; this.turnMs = msg.turnMs === undefined ? null : msg.turnMs;
   };
@@ -113,6 +121,9 @@
     if (msg.t === 'welcome') { this.seat = msg.seat; this.token = msg.token; this.owner = !!msg.owner; this._emit('welcome', msg); return; }
     if (msg.t === 'lobby') { this._emit('lobby', msg); return; }
     if (msg.t === 'events') { this.started = true; this.table._applyEventsMessage(msg); this._settleAll(true); this._emit('events', msg); return; }
+    // Not a poker.js event - a room-level notice sent alongside (just before)
+    // the fresh game's own 'events' message, never folded into table.events.
+    if (msg.t === 'game-over') { this._emit('game-over', msg); return; }
   };
 
   // Modeled on app.js's own wait(ms,t): resolves true when new state has

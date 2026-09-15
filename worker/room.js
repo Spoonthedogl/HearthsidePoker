@@ -15,10 +15,15 @@
  *
  * Unclaimed seats are always played by the existing AI, exactly as a
  * single-player table plays companions - a two-friend room still looks and
- * feels like Hearthside. Online rooms deliberately do not use the 12-hand
- * "evening"/club-fund structure: they just deal hands, keeping single-
- * player's economy untouched by anything a friend's room could do. Blinds
- * still follow the chosen table's schedule, exactly as single-player does.
+ * feels like Hearthside. Online rooms deliberately do not use single-
+ * player's 12-hand "evening"/club-fund structure - instead, a room plays a
+ * fixed-length "game" (handsPerGame hands, or fewer if only one seat still
+ * has chips), then every seat is reset to a fresh stack and the next game
+ * starts on its own. A seat that busts mid-game just sits out the rest of
+ * it - there is no online buy-in economy to rebuy from - so it is dropped
+ * from the between-hands "ready" requirement rather than being asked to
+ * click something that can no longer do anything. Blinds still follow the
+ * chosen table's schedule, restarting fresh each game.
  */
 (function (root, factory) {
   var deps = typeof module === 'object' && module.exports
@@ -63,8 +68,11 @@
     cfg = cfg || {};
     var seatCount = Number.isInteger(cfg.seatCount) ? cfg.seatCount : fallback.seatCount;
     seatCount = Math.max(2, Math.min(7, seatCount));
+    var handsPerGame = Number.isInteger(cfg.handsPerGame) ? cfg.handsPerGame : (fallback.handsPerGame || 7);
+    handsPerGame = Math.max(3, Math.min(20, handsPerGame));
     return {seatCount: seatCount, tableKind: HearthTables.find(cfg.tableKind).id,
-      difficulty: Poker.DIFFICULTIES.indexOf(cfg.difficulty) >= 0 ? cfg.difficulty : 'standard'};
+      difficulty: Poker.DIFFICULTIES.indexOf(cfg.difficulty) >= 0 ? cfg.difficulty : 'standard',
+      handsPerGame: handsPerGame};
   }
 
   function randomToken(random) {
@@ -87,13 +95,16 @@
     this.random = options.random || Math.random;
     this.now = options.now || (function () { return Date.now(); });
     this.phase = 'new'; // 'new' -> 'lobby' -> 'playing' -> 'closed'
-    this.seatCount = 0; this.tableKind = 'steady'; this.difficulty = 'standard';
+    this.seatCount = 0; this.tableKind = 'steady'; this.difficulty = 'standard'; this.handsPerGame = 7;
     this.seats = []; // index -> {token,name,connected} for a human seat, or null
     this.seatAvatar = []; // index -> companion avatar id for an AI-filled seat, or null
     this.tokenSeat = new Map();
     this.ownerToken = null;
     this.table = null;
-    this.handsPlayed = 0; // feeds HearthTables.blinds(); online rooms never "close an evening"
+    this.handsPlayed = 0; // hands played so far in the CURRENT game; feeds HearthTables.blinds() and resets to 0 every new game
+    this.gamesPlayed = 0; // which game this room is on; 0 until start(), 1 for the whole first game, etc.
+    this.cumulativeWins = {}; // token -> games that seat has won, for this room's whole lifetime
+    this.bustOrder = []; // seat indices in the order they ran out of chips this game, for standings tie-breaks; cleared every new game
     this.deadlineAt = null;
     this.handEndedAt = null;
     this.readySeats = new Set();
@@ -151,10 +162,13 @@
   Room.prototype._viewMessageFor = function (seat, fromEventId) {
     var table = this.table;
     var view = HearthRoomView.viewFor(table, seat);
+    // gameHand is 1-indexed for display ("HAND 1 OF 7"); handsPlayed itself
+    // counts hands already CONCLUDED this game (0 during the very first one).
     var msg = {t: 'events', from: fromEventId,
       events: table.events.slice(fromEventId).map(view.rotateEvent),
       snapshot: this._decorate(view.snapshot, seat), names: this._rotatedNames(seat),
-      smallBlind: table.smallBlind, bigBlind: table.bigBlind, startingStack: table.startingStack};
+      smallBlind: table.smallBlind, bigBlind: table.bigBlind, startingStack: table.startingStack,
+      gamesPlayed: this.gamesPlayed, handsPerGame: this.handsPerGame, gameHand: this.handsPlayed + 1};
     if (table.actor === seat) msg.legal = table.legalActions(seat);
     if (this.deadlineAt !== null && table.actor === seat) msg.turnMs = Math.max(0, this.deadlineAt - this.now());
     return msg;
@@ -171,7 +185,7 @@
 
   Room.prototype._lobbyMessage = function () {
     var self = this;
-    return {t: 'lobby', owner: this.ownerToken, config: {seatCount: this.seatCount, tableKind: this.tableKind, difficulty: this.difficulty},
+    return {t: 'lobby', owner: this.ownerToken, config: {seatCount: this.seatCount, tableKind: this.tableKind, difficulty: this.difficulty, handsPerGame: this.handsPerGame},
       seats: this.seats.map(function (seat, i) {
         return seat ? {seat: i, name: seat.name, connected: seat.connected, kind: 'human'} : {seat: i, name: FALLBACK_COMPANIONS[i % FALLBACK_COMPANIONS.length].name, kind: 'ai'};
       })};
@@ -195,8 +209,8 @@
   // creates it, and they take seat 0.
   Room.prototype.create = function (name, cfg, now, avatar) {
     if (this.phase !== 'new') return {ok: false, error: 'already-created'};
-    var conf = sanitizeConfig(cfg, {seatCount: 4});
-    this.seatCount = conf.seatCount; this.tableKind = conf.tableKind; this.difficulty = conf.difficulty;
+    var conf = sanitizeConfig(cfg, {seatCount: 4, handsPerGame: 7});
+    this.seatCount = conf.seatCount; this.tableKind = conf.tableKind; this.difficulty = conf.difficulty; this.handsPerGame = conf.handsPerGame;
     this.seats = new Array(this.seatCount).fill(null);
     var token = randomToken(this.random);
     this.seats[0] = {token: token, name: sanitizeName(name), connected: true, avatar: sanitizeAvatar(avatar)};
@@ -242,7 +256,7 @@
       while (grown.length < conf.seatCount) grown.push(null);
       this.seats = grown;
     }
-    this.seatCount = conf.seatCount; this.tableKind = conf.tableKind; this.difficulty = conf.difficulty;
+    this.seatCount = conf.seatCount; this.tableKind = conf.tableKind; this.difficulty = conf.difficulty; this.handsPerGame = conf.handsPerGame;
     this._assignCompanions();
     return {ok: true, out: this._broadcastLobby(null)};
   };
@@ -252,6 +266,7 @@
     if (this.phase !== 'lobby') return {ok: false, error: 'already-started'};
     var humanSeats = new Set();
     for (var i = 0; i < this.seatCount; i++) if (this.seats[i]) humanSeats.add(i);
+    this.gamesPlayed = 1;
     var blinds = HearthTables.blinds(this.tableKind, this.handsPlayed);
     this.table = new Poker.Table({names: this._names(), seatCount: this.seatCount, startingStack: STARTING_STACK,
       smallBlind: blinds.small, bigBlind: blinds.big, difficulty: this.difficulty, humanSeats: humanSeats, random: this.random});
@@ -280,24 +295,103 @@
     return {ok: true, out: this._broadcastFrom(fromEvent)};
   };
 
+  // Seat indices ranked best-to-worst for the game that just ended: still-
+  // funded seats first (more chips first), then busted seats in reverse
+  // bust order (whoever lasted longer placed higher). Ties among never-
+  // busted seats with equal stacks are left as ties (stable order).
+  Room.prototype._standings = function () {
+    var self = this;
+    var seats = this.table.players.map(function (p, i) { return i; });
+    seats.sort(function (a, b) {
+      var pa = self.table.players[a], pb = self.table.players[b];
+      if (pa.stack !== pb.stack) return pb.stack - pa.stack;
+      var ba = self.bustOrder.indexOf(a), bb = self.bustOrder.indexOf(b);
+      if (ba < 0 && bb < 0) return 0;
+      if (ba < 0) return -1;
+      if (bb < 0) return 1;
+      return bb - ba;
+    });
+    return seats.map(function (seat, i) { return {seat: seat, place: i + 1, stack: self.table.players[seat].stack}; });
+  };
+
+  // Called every time a hand concludes, before anything about the next hand
+  // or a new game is decided - the one moment this game's stack snapshot is
+  // final and worth checking for a seat that just ran out.
+  Room.prototype._recordBusts = function () {
+    var self = this;
+    this.table.players.forEach(function (p, i) {
+      if (p.stack === 0 && self.bustOrder.indexOf(i) < 0) self.bustOrder.push(i);
+    });
+  };
+
+  Room.prototype._gameOverMessageFor = function (viewerSeat, standings) {
+    var self = this, seatCount = this.seatCount, names = this._names();
+    var localize = function (seat) { return viewerSeat === null || viewerSeat === undefined ? seat : ((seat - viewerSeat) % seatCount + seatCount) % seatCount; };
+    var rotatedStandings = standings.map(function (row) {
+      return {seat: localize(row.seat), place: row.place, stack: row.stack, name: names[row.seat]};
+    }).sort(function (a, b) { return a.place - b.place; });
+    // Cumulative wins are a human-only, bragging-rights tally for the people
+    // actually in the room this session - not a persistent account, and not
+    // meaningful for a companion seat that has no token of its own.
+    var cumulative = this.seats.map(function (s, i) {
+      return s && {seat: localize(i), name: s.name, wins: self.cumulativeWins[s.token] || 0};
+    }).filter(Boolean).sort(function (a, b) { return b.wins - a.wins; });
+    return {t: 'game-over', gamesPlayed: this.gamesPlayed, standings: rotatedStandings, cumulative: cumulative};
+  };
+
+  Room.prototype._broadcastGameOver = function (standings) {
+    var out = [];
+    for (var seat = 0; seat < this.seatCount; seat++) {
+      if (!this.seats[seat]) continue;
+      out.push({to: seat, msg: this._gameOverMessageFor(seat, standings)});
+    }
+    return out;
+  };
+
+  // Resets every seat to a fresh stack and deals hand 1 of the next game.
+  // Blinds and the bust-order tie-breaker both restart clean, exactly as if
+  // this were a brand-new room - only the seats, names and cumulative wins
+  // carry over.
+  Room.prototype._startNewGame = function (now) {
+    this.gamesPlayed++;
+    this.handsPlayed = 0;
+    this.bustOrder = [];
+    this.table.players.forEach(function (p) { p.stack = STARTING_STACK; });
+    var blinds = HearthTables.blinds(this.tableKind, 0);
+    this.table.smallBlind = blinds.small; this.table.bigBlind = blinds.big;
+    this.table.newHand(); // every seat is freshly funded, so this cannot refuse
+    driveAI(this.table);
+    this._armTurnClock(now);
+  };
+
   Room.prototype._maybeDealNext = function (now) {
     if (!this.table || !this.table.result) return [];
-    var connectedHumans = this.seats.filter(function (s) { return s && s.connected; });
+    var self = this;
+    // A seat that busted this game has nothing left to decide - requiring
+    // its "ready" click too would just be one more thing it can't actually
+    // do anything about before anyone else could continue.
+    var connectedHumans = this.seats.filter(function (s, i) { return s && s.connected && self.table.players[i].stack > 0; });
     var allReady = connectedHumans.length > 0 && connectedHumans.every(function (s) { return this.readySeats.has(this.tokenSeat.get(s.token)); }, this);
     var timedOut = this.handEndedAt !== null && now - this.handEndedAt >= BETWEEN_HANDS_MS;
     if (!allReady && !timedOut) return [];
     this.readySeats.clear();
+    this._recordBusts();
     this.handsPlayed++;
+    var fundedNow = this.table.players.filter(function (p) { return p.stack > 0; }).length;
+    // A game ends at the configured hand count, or the moment it's already
+    // decided (down to one funded seat) - no reason to keep dealing hands
+    // nobody but the winner can do anything in.
+    if (this.handsPlayed >= this.handsPerGame || fundedNow < 2) {
+      var standings = this._standings();
+      var winnerSeat = this.seats[standings[0].seat];
+      if (winnerSeat) this.cumulativeWins[winnerSeat.token] = (this.cumulativeWins[winnerSeat.token] || 0) + 1;
+      var out = this._broadcastGameOver(standings);
+      this._startNewGame(now);
+      return out.concat(this._broadcastFrom(0));
+    }
     var blinds = HearthTables.blinds(this.tableKind, this.handsPlayed);
     this.table.smallBlind = blinds.small; this.table.bigBlind = blinds.big;
-    // Online has no buy-in economy to fall back on the way single-player's
-    // own newHand() does (it rebuys a busted seat before ever calling this) -
-    // if fewer than two seats still hold chips, newHand() correctly refuses
-    // and sets table.gameOver, but previously that refusal went completely
-    // unhandled here: the same already-shown hand got silently rebroadcast
-    // and readySeats cleared again, so "Ready for the next hand" looked
-    // clickable forever without anything ever actually happening.
-    if (!this.table.newHand()) return this._broadcastFrom(this.table.events.length);
+    if (!this.table.newHand()) return this._broadcastFrom(this.table.events.length); // guarded above by fundedNow; kept as a safety net
     driveAI(this.table);
     this._armTurnClock(now);
     return this._broadcastFrom(0);
@@ -307,7 +401,11 @@
     var seat = this._seatFor(token);
     if (seat === null) return {ok: false, error: 'unknown-token'};
     if (this.phase !== 'playing' || !this.table.result) return {ok: false, error: 'hand-in-progress'};
-    if (this.table.gameOver) return {ok: false, error: 'game-over'};
+    // Note: table.gameOver is Poker.Table's own live "fewer than two seats
+    // are currently funded" flag, set the instant a hand ends that way - not
+    // a room-level "nothing more can ever happen" state. _maybeDealNext()
+    // below treats that same condition as this game's natural end and
+    // starts a fresh one, so there is nothing for next() to refuse here.
     this.readySeats.add(seat);
     return {ok: true, out: this._maybeDealNext(now)};
   };
@@ -363,9 +461,10 @@
 
   Room.prototype.serialize = function () {
     return {
-      phase: this.phase, seatCount: this.seatCount, tableKind: this.tableKind, difficulty: this.difficulty,
+      phase: this.phase, seatCount: this.seatCount, tableKind: this.tableKind, difficulty: this.difficulty, handsPerGame: this.handsPerGame,
       seats: this.seats.map(function (s) { return s ? {token: s.token, name: s.name, avatar: s.avatar} : null; }),
       seatAvatar: this.seatAvatar, ownerToken: this.ownerToken, handsPlayed: this.handsPlayed,
+      gamesPlayed: this.gamesPlayed, cumulativeWins: this.cumulativeWins, bustOrder: this.bustOrder,
       tablePack: this.table ? HearthSession.pack(this.table, fullyCaughtUpUI(this.table)) : null
     };
   };
@@ -373,10 +472,12 @@
   Room.fromSerialized = function (data, options) {
     var room = new Room(options);
     room.phase = data.phase; room.seatCount = data.seatCount; room.tableKind = data.tableKind; room.difficulty = data.difficulty;
+    room.handsPerGame = data.handsPerGame || 7;
     // Every seat starts marked disconnected: a fresh process has no sockets
     // yet, and each seat's own next hello() will mark it connected again.
     room.seats = data.seats.map(function (s) { return s ? {token: s.token, name: s.name, connected: false, avatar: s.avatar || null} : null; });
     room.seatAvatar = data.seatAvatar; room.ownerToken = data.ownerToken; room.handsPlayed = data.handsPlayed;
+    room.gamesPlayed = data.gamesPlayed || 0; room.cumulativeWins = data.cumulativeWins || {}; room.bustOrder = data.bustOrder || [];
     room.seats.forEach(function (s, i) { if (s) room.tokenSeat.set(s.token, i); });
     if (data.tablePack) {
       var table = HearthSession.unpack(data.tablePack).table;
