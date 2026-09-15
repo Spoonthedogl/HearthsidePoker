@@ -1,5 +1,34 @@
 # Changelog
 
+## v1.6.8 — 2026-09-15
+
+Fixes a ~20-second dead stall once every real player busts in the
+same hand, and gives a game something to show for it besides who won
+the last one.
+
+**Save compatibility:** unaffected.
+
+### Fixed
+
+- **The table no longer stalls for a full 20 seconds once every real
+  player has busted in the same hand.** A busted seat has nothing to
+  click, so if that happened to everyone at once (an AI winning a
+  multi-way all-in over both real players, say), the room used to
+  wait out the same grace period meant for a slow human before
+  dealing the next hand - a long silent pause with nothing visibly
+  happening. It now deals immediately in that case; a player who's
+  merely disconnected (but still has chips) still gets their normal
+  chance to reconnect first.
+
+### Added
+
+- **A running net-chips total for the whole session**, shown next to
+  the win count on the standings screen after every game - e.g.
+  "Alice — 2 wins · +350 chips." Every game still starts everyone at
+  a fresh 500, so no lead ever carries into the next table; this
+  just keeps track of who's actually come out ahead across an
+  evening of games.
+
 ## v1.6.7 — 2026-09-15
 
 Fixes a busted player getting permanently stuck once their game ended
