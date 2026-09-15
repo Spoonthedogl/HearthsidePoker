@@ -8,13 +8,31 @@
   wide:{width:1440,height:900,pot:[755,483],hero:[720,780],heroWin:[720,714],rivalWinY:425},
   compact:{width:768,height:1408,pot:[430,466],hero:[384,910],heroWin:[384,890],rivalWinY:430}
  };
+ // The table's own wood rim (.table-wood in style.css: left 246 top 383
+ // right 1194 bottom 713, corner radius 160) is a rounded rectangle, not
+ // an ellipse. A near seat leans in front of the rail (z-index elevated
+ // above the table), so its downward offset needs to track the rim's
+ // actual curve - an off-center near seat sitting near a rounded corner
+ // is much closer to the rim than the plain sin() ellipse assumed, which
+ // let its chair perch visibly on top of the felt/wood instead of beside it.
+ var RIM={left:246,right:1194,bottom:713,cornerR:160};
+ function rimBottomAt(x){
+  var innerLeft=RIM.left+RIM.cornerR,innerRight=RIM.right-RIM.cornerR;
+  if(x>=innerLeft&&x<=innerRight)return RIM.bottom;
+  var cx=x<innerLeft?innerLeft:innerRight,dx=Math.min(RIM.cornerR,Math.abs(x-cx));
+  return RIM.bottom-RIM.cornerR+Math.sqrt(RIM.cornerR*RIM.cornerR-dx*dx);
+ }
  function wide(count){
   return Array.from({length:count},function(_,id){
-   var angle=Math.PI/2+id*2*Math.PI/count,c=Math.cos(angle),s=Math.sin(angle);
+   var angle=Math.PI/2+id*2*Math.PI/count,c=Math.cos(angle),s=Math.sin(angle),near=s>.15;
    var x=720+540*c,y=535+240*s;
-   var cards={x:720+(s>.15?345:300)*c-50,y:550+165*s-34,width:100,height:68};
-   var body={x:x-150,y:y-180,width:300,height:300};
-   return {id:id,body:body,near:s>.15,mirror:c>.1,label:{x:x-82-(s>.15?c*90:0),y:body.y-(s>.15?105:48),width:164,height:54},cards:cards,
+   var cards={x:720+(near?345:300)*c-50,y:550+165*s-34,width:100,height:68};
+   // The nameplate and cards keep the original ring position (already
+   // proven clear of neighboring seats); only the body/sprite - the part
+   // that can visually perch on the rim - shifts to hug the rim's curve.
+   var bodyY=near?rimBottomAt(x)+62:y;
+   var body={x:x-150,y:bodyY-180,width:300,height:300};
+   return {id:id,body:body,near:near,mirror:c>.1,label:{x:x-82-(near?c*90:0),y:y-180-(near?105:48),width:164,height:54},cards:cards,
     chips:{x:cards.x+(Math.abs(c)<.15?112:22),y:cards.y+(Math.abs(c)<.15?35:77),width:65,height:26},pan:c*.65};
   });
  }

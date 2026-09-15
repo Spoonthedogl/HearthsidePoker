@@ -1,5 +1,21 @@
 # Changelog
 
+## v1.6.13 — 2026-09-15
+
+Two visual polish fixes for the table.
+
+**Save compatibility:** unaffected.
+
+### Fixed
+
+- **Companion chairs no longer overlap the table's wood rim at a wide
+  table.** The two seats closest to the corners (as seen at a 6- or
+  7-player table) now sit cleanly beside the rail instead of perching
+  on top of the felt.
+- **Character portraits on the "Hand review" screen are properly
+  centered.** Each companion's face now sits in the middle of its
+  little circular portrait, instead of being cropped off to one side.
+
 ## v1.6.12 — 2026-09-15
 
 A round of fixes from a code review of recent online-play changes:
