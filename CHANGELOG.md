@@ -1,5 +1,19 @@
 # Changelog
 
+## v1.6.16 — 2026-09-15
+
+A second follow-up to the candle-chest fix.
+
+**Save compatibility:** unaffected.
+
+### Fixed
+
+- **A companion with a raised arm near the candle chest no longer has
+  a round bite missing from it.** The candle's own cutout was a single
+  oversized circle that reached past the candle itself; it now hugs
+  the candle and its flame closely, so it no longer eats into whatever
+  happens to be nearby.
+
 ## v1.6.15 — 2026-09-15
 
 A follow-up to v1.6.14's candle-chest fix.
