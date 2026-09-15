@@ -12,6 +12,7 @@
  var reconnecting=false,reconnectAttempts=0; // a dropped socket gets a few quiet retries before online play gives up; see the Online play block.
  var onlineHandNumber=0; // which hand driveOnline's local replay state (eventIndex, visibleSeats, ...) is caught up to; see the Online play block.
  var onlineRejoining=false; // true only while attempting to resume a saved session from a fresh page load; see the Online play block.
+ var onlineDriving=false; // true only while a driveOnline() call is actually executing; see driveOnline's own guard and the 'events' handler below.
  var visibleSeats=table.players.map(function(p){return {stack:p.stack,bet:0,folded:false,allIn:false,lastAction:''};});
  var companions=new HearthCompanions({onChange:renderSpeech});
  var computation=new HearthComputation(),guidePending={},guideErrors={};
@@ -412,6 +413,20 @@
  // waits for the server's next push instead - the server has already
  // resolved every AI turn by the time that push arrives.
  async function driveOnline(t){
+  // A seat with no chips has no button that would ever call this again (see
+  // renderActions()'s "YOU'RE OUT THIS GAME" branch) - it can only be woken
+  // back up by a fresh 'events' push arriving while nothing is already
+  // driving (see the 'events' handler below). That push arrives at every
+  // seat at once, including one whose own click already scheduled a restart
+  // (driveOnlineAfterAction's pending waitForEvents), so this guard is what
+  // keeps the two from ever running the replay loop twice at once - whoever
+  // gets here first wins, and it makes no difference which one does, since
+  // both would replay the exact same table.events from the exact same
+  // eventIndex.
+  if(onlineDriving)return;onlineDriving=true;
+  try{await driveOnlineInner(t);}finally{onlineDriving=false;}
+ }
+ async function driveOnlineInner(t){
   // Each online hand's event log restarts from index 0 on the server (see
   // multiplayer.js's _applyEventsMessage), but eventIndex is this file's own
   // separate replay cursor - nothing else ever rewound it, so from hand 2
@@ -461,11 +476,16 @@
  // _applyPresence), so a plain re-render is all that's needed to show an
  // opponent's seat flip to/from "Away" without waiting on the next hand.
  HearthOnline.on('lobby',function(msg){if(!online){onlineRejoining=false;renderOnlineLobby(msg);}else{if(reconnecting){reconnecting=false;reconnectAttempts=0;}if(started)render();}});
- // Once already online, driveOnline()'s own waitForEvents(t) call is what
- // wakes back up to consume a new push - nothing else needs to react here,
- // except right after a reconnect: that loop already returned (its wait was
- // cancelled when the old socket closed), so it has to be restarted here.
- HearthOnline.on('events',function(){if(!online){onlineRejoining=false;beginOnlinePlay();}else if(reconnecting){reconnecting=false;reconnectAttempts=0;beginOnlinePlay();}});
+ // Usually driveOnline()'s own waitForEvents(t) call is what wakes back up
+ // to consume a new push, and this handler has nothing to do. Two cases
+ // still need it to actively restart the loop: right after a reconnect
+ // (that loop already returned when the old socket closed), and a seat
+ // that busted out of a game - it has no button to click, so its own loop
+ // exited for good after its last hand and only a fresh push can revive it
+ // (e.g. once a new game refunds everyone). driveOnline's own guard makes
+ // calling it here safe even when it's already running for some other
+ // reason - this only ever does anything on the seat where it was needed.
+ HearthOnline.on('events',function(){if(!online){onlineRejoining=false;beginOnlinePlay();}else if(reconnecting){reconnecting=false;reconnectAttempts=0;beginOnlinePlay();}else if(!onlineDriving)driveOnline(version);});
  // Not a poker.js event - a standalone notice the server sends alongside
  // (just before) the fresh game's own dealt-hand broadcast. Shown as its own
  // pausing modal rather than folded into driveOnline()'s replay: the new
