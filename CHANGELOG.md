@@ -1,5 +1,20 @@
 # Changelog
 
+## v1.6.9 — 2026-09-15
+
+A visual fix for the phone/mobile web layout.
+
+**Save compatibility:** unaffected.
+
+### Fixed
+
+- **Companions no longer clip on top of the table on mobile web.** A
+  side seat's chair or legs could visibly overlap the felt instead of
+  sitting naturally beside it. Seats that genuinely sit close to the
+  table's edge still lean in front of the rail so a tighter table
+  never swallows them - only the seats that don't need it were
+  affected.
+
 ## v1.6.8 — 2026-09-15
 
 Fixes a ~20-second dead stall once every real player busts in the
