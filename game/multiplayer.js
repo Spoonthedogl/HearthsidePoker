@@ -109,6 +109,12 @@
     this.room = options.room;
     var server = options.server || defaultServer();
     this._connectServer = server; // remembered so a later reconnect() can reopen the same server/room
+    // Never leave a previous socket open alongside this one. An abandoned
+    // socket keeps its listeners on this same Client, so a late 'welcome'
+    // could overwrite the live seat/token and its close could settle the new
+    // connection's waiters. reconnect() comes through here too, so the fix
+    // belongs at the one place that opens sockets rather than in each caller.
+    if (this.ws) { var previous = this.ws; this.ws = null; try { previous.close(); } catch (e) {} }
     var ws = new WebSocket(server + (server.indexOf('?') >= 0 ? '&' : '?') + 'room=' + encodeURIComponent(options.room));
     this.ws = ws;
     ws.addEventListener('open', function () {

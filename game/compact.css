@@ -224,6 +224,9 @@ body.compact #recapContent h3{font-size:28px}
 /* A finger is not a mouse pointer: no lift-on-hover, no sticky hover states. */
 @media (hover:none){
  button:hover:not(:disabled){filter:none;transform:none}
+ /* The copy button tints on hover, which a tap would otherwise leave lit up
+    until the next tap elsewhere. */
+ #onlineCopyCode:hover{background:#d9c69f33}
  .hole-cards .card:hover{transform:rotate(-7deg) translateY(-22px)}
  .hole-cards .card:nth-child(2):hover{transform:rotate(7deg) translateY(-22px)}
 }

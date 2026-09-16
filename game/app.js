@@ -10,6 +10,7 @@
  var table=new Poker.Table({names:names}),started=false,busy=false,version=0,eventIndex=0;
  var online=false,onlineRoomCode=null; // true only inside an active online room; see the Online play block near the end of this file.
  var onlineConnecting=false; // true from Create/Join until the socket resolves (welcome or error) - blocks a double-tap from opening two competing sockets.
+ var onlineConnectTimer=null; // watchdog: releases the guard above if the socket never answers at all.
  var reconnecting=false,reconnectAttempts=0,connectionLost=false; // a dropped socket gets a few quiet retries before online play gives up; see the Online play block.
  var onlineHandNumber=0; // which hand driveOnline's local replay state (eventIndex, visibleSeats, ...) is caught up to; see the Online play block.
  var onlineRejoining=false; // true only while attempting to resume a saved session from a fresh page load; see the Online play block.
@@ -48,7 +49,15 @@
  (function(){var m=document.querySelector('meta[name=viewport]');if(!m){m=document.createElement('meta');m.name='viewport';document.head.appendChild(m);}m.setAttribute('content','width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover');})();
  var compact=null,seatsMounted=false,rotateDismissed=false,fitMotes=function(){};
  function seatVariant(){return compact?'compact':'wide';}
- function touchDevice(){return matchMedia('(pointer:coarse)').matches;}
+ // Queried once: applyMode() runs on four separate resize sources, commonly
+ // several times per tick of a drag-resize.
+ var coarsePointer=matchMedia('(pointer:coarse)');
+ function touchDevice(){return coarsePointer.matches;}
+ // Wide enough for the largest portrait tablets (an iPad Pro 12.9" is 1024
+ // CSS px across, an 11" is 834), all of which otherwise fall through the gap
+ // between the phone cutoff and the compact design's own 768px canvas and get
+ // the desk layout shrunk instead. Touch only: see applyMode().
+ var TABLET_PORTRAIT_MAX=1040,PHONE_MAX=560;
  function resize(){var box=HearthSeating.STAGE[seatVariant()];$('stage').style.transform='translate(-50%,-50%) scale('+Math.min(innerWidth/box.width,innerHeight/box.height)+')';}
  // The on-screen keyboard (e.g. the raise amount field) shrinks innerHeight
  // on many mobile browsers without the device actually rotating - reading
@@ -63,16 +72,19 @@
  // mode at all on an ordinary landscape monitor.
  function isPortrait(){if(!touchDevice())return innerHeight>=innerWidth;return screen.height&&screen.width?screen.height>=screen.width:innerHeight>=innerWidth;}
  function applyMode(){
-  // Two different thresholds on purpose: phoneNarrow (the original cutoff)
-  // is only for nagging a sideways *phone* to rotate back - a landscape
-  // tablet at, say, 1024x768 is already fine in the wide layout and must
-  // not be told to rotate. tabletNarrow is wide enough to also catch a
-  // portrait tablet (e.g. 768x1024) that used to fall through the gap
-  // between phoneNarrow and the compact design's own 768px canvas, scaling
-  // the desktop layout down small instead of switching to the compact one.
-  var phoneNarrow=Math.min(innerWidth,innerHeight)<=560,tabletNarrow=Math.min(innerWidth,innerHeight)<=820,portrait=isPortrait(),want=tabletNarrow&&portrait;
+  // Three thresholds, each for a different job. phoneNarrow is only for
+  // nagging a sideways *phone* to rotate back - a landscape tablet at
+  // 1024x768 is already fine in the wide layout and must not be told to.
+  // The compact switch itself is pointer-aware: a touch screen gets the wide
+  // tablet limit, while a mouse/trackpad session keeps the original narrow
+  // cutoff. Compact is a phone layout - it hides the whole Display settings
+  // tab (see compact.css) - so an ordinary desktop window snapped tall and
+  // narrow, or a vertical second monitor, must not silently land in it.
+  var shortEdge=Math.min(innerWidth,innerHeight),touch=touchDevice();
+  var phoneNarrow=shortEdge<=PHONE_MAX,portrait=isPortrait();
+  var want=shortEdge<=(touch?TABLET_PORTRAIT_MAX:PHONE_MAX)&&portrait;
   if(portrait)rotateDismissed=false;
-  $('rotateHint').classList.toggle('hidden',!(phoneNarrow&&!portrait&&touchDevice())||rotateDismissed);
+  $('rotateHint').classList.toggle('hidden',!(phoneNarrow&&!portrait&&touch)||rotateDismissed);
   if(want!==compact){compact=want;document.body.classList.toggle('compact',compact);ambience.setFit(compact?'width':'cover');fitMotes();if(seatsMounted){configureSeats();render();}}
   resize();
  }
@@ -141,7 +153,7 @@
   // below): once reconnection has given up, `table` is still the online
   // RemoteTable shim, not a real Poker.Table, so nothing here may fall
   // through to an offline action button - the only legal move left is out.
-  if(connectionLost){$('turnText').textContent='CONNECTION LOST';$('turnHint').textContent='';btns.innerHTML='<button id="onlineLeaveSubmit" class="primary">Leave room <span>↗</span></button>';return;}
+  if(connectionLost){$('turnText').textContent='CONNECTION LOST';$('turnHint').textContent='';btns.innerHTML='<button id="onlineLeaveSubmit" class="primary">Leave the room <span>↗</span></button>';return;}
   if(joining){$('turnText').textContent='TAKING YOUR SEAT';$('turnHint').textContent='';btns.innerHTML='<button disabled class="primary">Settling in…</button>';return;}
   if(online){
    if(!HearthOnline.started){$('turnText').textContent='IN THE LOBBY';$('turnHint').textContent='';btns.innerHTML='<button disabled class="primary">Waiting to begin…</button>';return;}
@@ -230,8 +242,13 @@
  // Any fresh table is also a fresh evening: a new stack has to reset the
  // buy-in count, or the evening's take-home would be measured against a
  // stake that is no longer what the player actually put in.
- function reset(){eveningHands=0;buyIns=1;eveningClosed=false;eveningEarned=0;record={wins:0,losses:0,net:0,lastHand:0};version++;companions.clear();busy=false;activeSeat=null;joining=false;$('stage').classList.remove('joining');$('stage').classList.add('seated');table=new Poker.Table({names:names,difficulty:chosenDifficulty});handStartStack=table.startingStack;configureSeats();window.hearth.table=table;restore=null;checkpointData=null;safeStore('hearthside-session',null);closeAll();document.querySelectorAll('.thinking').forEach(function(e){e.classList.remove('thinking');});started=true;eventIndex=0;newHand();}
- function act(type,amount){if(online){if(!started||busy||paused()||table.actor!==0)return;busy=true;activeSeat=null;render();HearthOnline.act(type,amount);driveOnlineAfterAction(version);return;}if(!started||joining||busy||paused()||table.actor!==0||revealed)return;audio.init();try{table.act(0,type,amount);checkpoint();drive(version);}catch(err){setMessage(err.message);renderActions();}}
+ // Also the way out of a lost online room: renderActions() checks
+ // connectionLost before anything else, so a fresh table that left the flag
+ // set would deal a real hand the player could never act in.
+ function reset(){if(online||connectionLost)HearthOnline.disconnect();online=false;connectionLost=false;reconnecting=false;reconnectAttempts=0;eveningHands=0;buyIns=1;eveningClosed=false;eveningEarned=0;record={wins:0,losses:0,net:0,lastHand:0};version++;companions.clear();busy=false;activeSeat=null;joining=false;$('stage').classList.remove('joining');$('stage').classList.add('seated');table=new Poker.Table({names:names,difficulty:chosenDifficulty});handStartStack=table.startingStack;configureSeats();window.hearth.table=table;restore=null;checkpointData=null;safeStore('hearthside-session',null);closeAll();document.querySelectorAll('.thinking').forEach(function(e){e.classList.remove('thinking');});started=true;eventIndex=0;newHand();}
+ // Once reconnection has given up, `table` is still the online RemoteTable,
+ // which has no act() - every route in here (buttons, C, F) must stop short.
+ function act(type,amount){if(connectionLost)return;if(online){if(!started||busy||paused()||table.actor!==0)return;busy=true;activeSeat=null;render();HearthOnline.act(type,amount);driveOnlineAfterAction(version);return;}if(!started||joining||busy||paused()||table.actor!==0||revealed)return;audio.init();try{table.act(0,type,amount);checkpoint();drive(version);}catch(err){setMessage(err.message);renderActions();}}
  // table.actor still shows MY turn until the server actually answers - drive()
  // would see that stale value and stop immediately instead of waiting, so an
  // action always waits for the server's first reply before replaying anything.
@@ -274,14 +291,14 @@
  function openJournal(){audio.init();delete guideErrors[analysisKey()];lastFocus=document.activeElement;closeAll(false);$('journalBackdrop').classList.remove('hidden');$('journal').classList.remove('hidden');syncScenePause();renderJournal();sound('guideOpen');$('closeJournal').focus();}
  function closeAll(focus){var had=paused();disarmDiscard();$('journal').classList.add('hidden');['settings','rules','confirmReset','recap','eveningClose','shelf','online','gameOver'].forEach(function(id){$(id).classList.add('hidden');});$('journalBackdrop').classList.add('hidden');syncScenePause();if(had)sound('guideClose');if(focus!==false&&lastFocus&&lastFocus.isConnected)lastFocus.focus();}
  function openModal(id){audio.init();lastFocus=document.activeElement;closeAll(false);$('journalBackdrop').classList.remove('hidden');$(id).classList.remove('hidden');syncScenePause();sound('guideOpen');var focus=$(id).querySelector('button,input,select');if(focus)focus.focus();}
- document.addEventListener('click',function(e){var b=e.target.closest('button');if(!b||b.disabled)return;var id=b.id;if(b.dataset.close){closeAll();return;}if(b.dataset.action){act(b.dataset.action);return;}if(b.dataset.buy){var bought=HearthClub.buy(club,b.dataset.buy);if(bought.ok){club=bought.state;saveClub();applyComforts();sound('chips');}renderShelf();return;}if(b.dataset.tab){guideTab=b.dataset.tab;selectedCategory=null;document.querySelectorAll('.journal-tabs button').forEach(function(x){x.classList.toggle('selected',x===b);});sound('click');renderJournal();return;}if(b.dataset.category!==undefined){renderDetail(Number(b.dataset.category));sound('click');$('journalDetail').scrollIntoView({block:'nearest',behavior:$('reducedMotion').checked?'auto':'smooth'});return;}if(b.dataset.raise){var l=table.legalActions(),min=Math.min(l.minRaiseTo,l.maxRaiseTo),v=b.dataset.raise==='min'?min:b.dataset.raise==='all'?l.maxRaiseTo:table.currentBet+Math.round((table.pot+l.call)*(b.dataset.raise==='half'?.5:1));v=Math.max(min,Math.min(l.maxRaiseTo,v));$('raiseRange').value=$('raiseNumber').value=v;sound('chips');return;}
+ document.addEventListener('click',function(e){var b=e.target.closest('button');if(!b||b.disabled)return;var id=b.id;if(b.dataset.close){cancelPendingConnect();closeAll();return;}if(b.dataset.action){act(b.dataset.action);return;}if(b.dataset.buy){var bought=HearthClub.buy(club,b.dataset.buy);if(bought.ok){club=bought.state;saveClub();applyComforts();sound('chips');}renderShelf();return;}if(b.dataset.tab){guideTab=b.dataset.tab;selectedCategory=null;document.querySelectorAll('.journal-tabs button').forEach(function(x){x.classList.toggle('selected',x===b);});sound('click');renderJournal();return;}if(b.dataset.category!==undefined){renderDetail(Number(b.dataset.category));sound('click');$('journalDetail').scrollIntoView({block:'nearest',behavior:$('reducedMotion').checked?'auto':'smooth'});return;}if(b.dataset.raise){var l=table.legalActions(),min=Math.min(l.minRaiseTo,l.maxRaiseTo),v=b.dataset.raise==='min'?min:b.dataset.raise==='all'?l.maxRaiseTo:table.currentBet+Math.round((table.pot+l.call)*(b.dataset.raise==='half'?.5:1));v=Math.max(min,Math.min(l.maxRaiseTo,v));$('raiseRange').value=$('raiseNumber').value=v;sound('chips');return;}
   if(id==='resumeGame')closeAll();else if(id==='settingsRules')openModal('rules');else if(id==='quitGame'||id==='windowQuit')quitGame();else if(id==='discardQuit'){if(discardArmed)discardAndQuit();else armDiscard(b);}else if(id==='recapButton'){renderRecap();openModal('recap');}else if(id==='startButton')start();else if(id==='onlineButton'){startOnlineFlow();}else if(id==='onlineRejoinButton'){onlineRejoinRoom();}else if(id==='onlineCopyCode'){onlineCopyCode();}else if(id==='onlineCreateSubmit')onlineCreateRoom();else if(id==='onlineJoinSubmit')onlineJoinRoom();else if(id==='onlineStartSubmit')HearthOnline.start();else if(id==='onlineNextSubmit'){busy=true;render();HearthOnline.next();driveOnlineAfterAction(version);}else if(id==='onlineLeaveSubmit')onlineLeaveRoom();else if(id==='nextHand'||id==='recapNextHand'){if(busy||!revealed)return;if(eveningOver()){closeEvening();return;}closeAll(false);audio.init();if(table.players[0].stack===0)rebuy();else newHand();}else if(id==='endEvening'){if(busy||!revealed)return;closeEvening();}else if(id==='newEveningButton'){closeAll(false);audio.init();newEvening();}else if(id==='shelfButton'||id==='eveningShelf'){renderShelf();openModal('shelf');}else if(id==='freshTable'){if(busy||!revealed)return;closeAll(false);audio.init();reset();}else if(id==='guideButton'||id==='peekButton')openJournal();else if(id==='closeJournal')closeAll();else if(id==='soundButton'){syncSettings();openModal('settings');}else if(id==='tableSetup'){setupChoices();openModal('confirmReset');}else if(id==='rulesButton')openModal('rules');else if(id==='newTableButton'){setupChoices();openModal('confirmReset');}else if(id==='resetConfirm'){var selected=HearthRoster.selected();if(selected.length!==Number($('tableSize').value)-1)return;names=['You'].concat(selected);tableKind=HearthTables.find($('tableKind').value).id;chosenDifficulty=Poker.DIFFICULTIES.indexOf($('tableDifficulty').value)>=0?$('tableDifficulty').value:'standard';reset();}else if(id==='raiseToggle')raisePanel();else if(id==='raiseConfirm')confirmRaise();else if(id==='muteButton'){audio.toggleMute();syncSettings();saveSettings();}else if(id==='testSound'){audio.init();audio.play('chips',{intensity:1});}
  });
  $('gamePace').addEventListener('change',function(){pace=this.value;$('stage').style.setProperty('--pace',HearthSession.paceFactor(pace));saveSettings();});
- $('journalBackdrop').addEventListener('click',function(){closeAll();});
+ $('journalBackdrop').addEventListener('click',function(){cancelPendingConnect();closeAll();});
  document.addEventListener('input',function(e){var id=e.target.id;if(id==='raiseRange')$('raiseNumber').value=e.target.value;if(id==='raiseNumber'&&$('raiseRange'))$('raiseRange').value=e.target.value;if(id==='masterVolume')audio.setMaster(Number(e.target.value)/100);if(id==='musicVolume')audio.setMusic(Number(e.target.value)/100);if(id==='ambienceVolume')audio.setAmbience(Number(e.target.value)/100);if(id==='effectsVolume')audio.setEffects(Number(e.target.value)/100);if(id==='reducedMotion'){$('stage').classList.toggle('gentle',e.target.checked);cat.tick(0,{gentle:e.target.checked,paused:paused(),hidden:document.hidden});}if(id==='fourColour')document.body.classList.toggle('four-colour',e.target.checked);if(id==='largeText')document.body.classList.toggle('large-text',e.target.checked);if(['masterVolume','musicVolume','ambienceVolume','effectsVolume','reducedMotion','fourColour','largeText'].indexOf(id)>=0)queueSettingsSave();});
  function syncSettings(){$('masterVolume').value=audio.getMaster()*100;$('effectsVolume').value=audio.getEffects()*100;$('musicVolume').value=audio.getMusic()*100;$('ambienceVolume').value=audio.getAmbience()*100;$('muteButton').textContent=audio.isMuted()?'Unmute sounds':'Mute all';$('gamePace').value=pace;saveSession();}
- document.addEventListener('keydown',function(e){if(e.key==='Escape'){e.preventDefault();if(e.repeat)return;if(paused())closeAll();else{if(raiseOpen)renderActions();syncSettings();openModal('settings');}return;}if(e.key==='Tab'&&paused()){var modal=['journal','settings','rules','confirmReset','recap','eveningClose','shelf','online','gameOver'].map($).find(function(x){return !x.classList.contains('hidden');});var focusable=Array.from(modal.querySelectorAll('button:not(:disabled),input:not(:disabled),select:not(:disabled)')).filter(function(el){return el.getClientRects().length>0;});if(focusable.length){var first=focusable[0],last=focusable[focusable.length-1];if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus();}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus();}}return;}if(e.key==='Enter'&&e.target.id==='raiseNumber'){e.preventDefault();confirmRaise();return;}if(e.target.tagName==='INPUT'||e.target.tagName==='SELECT')return;if(e.key.toLowerCase()==='h'){e.preventDefault();if(e.repeat)return;if(!$('journal').classList.contains('hidden'))closeAll();else openJournal();return;}if(paused()||e.repeat)return;if(e.key.toLowerCase()==='c'&&started&&table.actor===0&&!busy)act(table.legalActions().check?'check':'call');if(e.key.toLowerCase()==='f')act('fold');});
+ document.addEventListener('keydown',function(e){if(e.key==='Escape'){e.preventDefault();if(e.repeat)return;if(paused()){cancelPendingConnect();closeAll();}else{if(raiseOpen)renderActions();syncSettings();openModal('settings');}return;}if(e.key==='Tab'&&paused()){var modal=['journal','settings','rules','confirmReset','recap','eveningClose','shelf','online','gameOver'].map($).find(function(x){return !x.classList.contains('hidden');});var focusable=Array.from(modal.querySelectorAll('button:not(:disabled),input:not(:disabled),select:not(:disabled)')).filter(function(el){return el.getClientRects().length>0;});if(focusable.length){var first=focusable[0],last=focusable[focusable.length-1];if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus();}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus();}}return;}if(e.key==='Enter'&&e.target.id==='raiseNumber'){e.preventDefault();confirmRaise();return;}if(e.target.tagName==='INPUT'||e.target.tagName==='SELECT')return;if(e.key.toLowerCase()==='h'){e.preventDefault();if(e.repeat)return;if(!$('journal').classList.contains('hidden'))closeAll();else openJournal();return;}if(paused()||e.repeat)return;if(e.key.toLowerCase()==='c'&&started&&table.actor===0&&!busy)act(table.legalActions().check?'check':'call');if(e.key.toLowerCase()==='f'&&started&&table.actor===0&&!busy)act('fold');});
  var npcHoverTimes={},lastNpcSound=0;
  document.addEventListener('companion-hover',function(e){if(paused()||document.hidden)return;var now=performance.now(),key=e.detail.character,el=e.target;if(now-(npcHoverTimes[key]||-9999)<4000)return;npcHoverTimes[key]=now;el.classList.remove('hover-react');void el.offsetWidth;el.classList.add('hover-react');setTimeout(function(){el.classList.remove('hover-react');},1150);if(started&&now-lastNpcSound>750){audio.play('npc_'+key,{volume:.45,pan:Number(el.dataset.pan)});lastNpcSound=now;}});
  var lastHover=0,lastCardHover=0,pointerHovers=matchMedia('(hover:hover)').matches;
@@ -390,13 +407,39 @@
   if(ok){copied();return;}
   if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(code).then(copied).catch(function(){});
  }
+ // One way in, so every entry point gets the same two safeguards: a socket
+ // that never answers (a captive portal, a black-holed TCP stream) releases
+ // the guard instead of locking Create/Join/Rejoin out for the page's life,
+ // and a constructor that throws synchronously (mixed-content ws:// from an
+ // https page) is caught rather than escaping before any listener exists.
+ function onlineConnect(options){
+  onlineConnecting=true;
+  clearTimeout(onlineConnectTimer);
+  onlineConnectTimer=setTimeout(function(){
+   if(!onlineConnecting)return;
+   onlineConnecting=false;onlineRejoining=false;
+   HearthOnline.disconnect();
+   if(!$('online').classList.contains('hidden'))renderOnlineEntry('The room did not answer. Check the code and try again.');
+  },12000);
+  try{HearthOnline.connect(options);}
+  catch(err){
+   clearTimeout(onlineConnectTimer);onlineConnecting=false;onlineRejoining=false;
+   renderOnlineEntry('This page cannot reach the room server from here.');
+  }
+ }
+ // Backing out of the online modal while a socket is still opening must not
+ // leave it to arrive later and seat the player in the room they dismissed.
+ function cancelPendingConnect(){
+  if(!onlineConnecting)return;
+  clearTimeout(onlineConnectTimer);onlineConnecting=false;onlineRejoining=false;
+  if(!online)HearthOnline.disconnect();
+ }
  function onlineCreateRoom(){
   if(onlineConnecting)return;
   var name=($('onlineName').value||'').trim().slice(0,12)||'Guest';onlineSaveName(name);
   var avatar=$('onlineAvatar').value;onlineSaveAvatar(avatar);
   onlineRoomCode=HearthRoomCode.generate();
-  onlineConnecting=true;
-  HearthOnline.connect({room:onlineRoomCode,name:name,avatar:avatar,create:true,cfg:{seatCount:Number($('onlineSeatCount').value),difficulty:$('onlineDifficulty').value,tableKind:$('onlineTableKind').value,handsPerGame:Number($('onlineHandsPerGame').value)}});
+  onlineConnect({room:onlineRoomCode,name:name,avatar:avatar,create:true,cfg:{seatCount:Number($('onlineSeatCount').value),difficulty:$('onlineDifficulty').value,tableKind:$('onlineTableKind').value,handsPerGame:Number($('onlineHandsPerGame').value)}});
  }
  function onlineJoinRoom(){
   if(onlineConnecting)return;
@@ -405,8 +448,7 @@
   var code=HearthRoomCode.normalize($('onlineCode').value);
   if(!code){renderOnlineEntry('That doesn’t look like a room code.');return;}
   onlineRoomCode=code;
-  onlineConnecting=true;
-  HearthOnline.connect({room:code,name:name,avatar:avatar});
+  onlineConnect({room:code,name:name,avatar:avatar});
  }
  // Offered on the main screen instead of "Play with friends" whenever a
  // recent session is saved - one click straight back to the same seat via
@@ -414,10 +456,10 @@
  function onlineRejoinRoom(){
   if(onlineConnecting)return;
   var saved=onlineSavedSession();if(!saved)return;
-  onlineRoomCode=saved.room;onlineRejoining=true;onlineConnecting=true;
+  onlineRoomCode=saved.room;onlineRejoining=true;
   closeAll(false);openModal('online');
   $('onlineBody').innerHTML='<p class="pace-note">Rejoining room '+HearthRoomCode.display(saved.room)+'…</p>';
-  HearthOnline.connect({room:saved.room,token:saved.token});
+  onlineConnect({room:saved.room,token:saved.token});
  }
  function renderGameOver(msg){
   $('gameOverTitle').textContent='Game '+msg.gamesPlayed+' complete';
@@ -527,7 +569,7 @@
  // alike - refreshes the saved session, so onlineRejoinRoom() above always
  // has an up-to-date token to come back to (and its 10-minute expiry tracks
  // time since we were last actually in the room, not time since we joined).
- HearthOnline.on('welcome',function(msg){onlineConnecting=false;onlineSaveSession(onlineRoomCode,msg.token);});
+ HearthOnline.on('welcome',function(msg){clearTimeout(onlineConnectTimer);onlineConnecting=false;onlineSaveSession(onlineRoomCode,msg.token);});
  // Once already online, a 'lobby' push is just a presence update - the
  // RemoteTable's already applied it to table.players (see multiplayer.js's
  // _applyPresence), so a plain re-render is all that's needed to show an
@@ -554,7 +596,7 @@
  // knows, which is still correct since nothing here invalidated it.
  HearthOnline.on('error',function(msg){
   if(!online){
-   onlineConnecting=false;
+   clearTimeout(onlineConnectTimer);onlineConnecting=false;
    // A saved session that no longer resolves (the room expired, the token
    // was never valid) would otherwise keep offering a "Rejoin" that can
    // only ever fail again the same way.
@@ -575,7 +617,15 @@
   // A socket can close on its own, with no prior 'error' message, if the
   // very first connection attempt (Create/Join/Rejoin) never completes -
   // that path must still release the double-tap guard below.
-  if(!online){onlineConnecting=false;return;}
+  if(!online){
+   clearTimeout(onlineConnectTimer);
+   var wasConnecting=onlineConnecting;onlineConnecting=false;onlineRejoining=false;
+   // Sitting in the lobby waiting for the host is the common case here: the
+   // socket is gone, so the seat list is frozen and the host's "deal" would
+   // never arrive. Say so instead of leaving a dead screen up.
+   if(!$('online').classList.contains('hidden'))renderOnlineEntry(wasConnecting?'The room could not be reached.':'The connection to the room was lost.');
+   return;
+  }
   if(reconnectAttempts>=5){online=false;reconnecting=false;busy=false;connectionLost=true;setMessage('The connection to the room was lost.');renderActions();return;}
   reconnecting=true;reconnectAttempts++;busy=true;
   setMessage('Reconnecting'+'.'.repeat(Math.min(reconnectAttempts,3))+'…');renderActions();
